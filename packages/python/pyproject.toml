@@ -34,4 +34,4 @@ llmwho = "llmwho.cli:main"
 packages = ["src/llmwho"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/llmwho", "README.md", "pyproject.toml"]
+include = ["src/llmwho", "README.md", "LICENSE", "pyproject.toml"]

@@ -14,6 +14,7 @@ class RepositoryContractTests(unittest.TestCase):
             "docs/VISION.md",
             "docs/ROADMAP.md",
             "docs/RESEARCH.md",
+            "docs/STABILITY.md",
             "SECURITY.md",
         ):
             self.assertTrue((ROOT / relative).is_file(), relative)
@@ -34,9 +35,9 @@ class RepositoryContractTests(unittest.TestCase):
 
     def test_readme_states_probabilistic_and_passive_contract(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("Passive by default", readme)
+        self.assertIn("or send synthetic traffic", readme)
         self.assertIn("probabilistic", readme)
-        self.assertIn("No raw prompts or responses", readme)
+        self.assertIn("does **not** include raw prompts", readme)
 
     def test_research_separates_evidence_status_and_product_claims(self) -> None:
         research = (ROOT / "docs/RESEARCH.md").read_text(encoding="utf-8")
@@ -51,6 +52,29 @@ class RepositoryContractTests(unittest.TestCase):
             "one-call in-application passive hook",
         ):
             self.assertIn(phrase, research)
+
+    def test_public_docs_explain_real_mvp_and_stability_layers(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        stability = (ROOT / "docs/STABILITY.md").read_text(encoding="utf-8")
+        for phrase in (
+            "version 0.1 infers identity from response-declared model",
+            "metadata and headers",
+            "Active probes cost requests and are never triggered by `init()`",
+            "Raw content capture is deliberately unavailable in 0.1",
+            "Capability similarity does not uniquely identify model weights",
+        ):
+            self.assertIn(phrase, readme)
+        for phrase in (
+            "AI Stupid Level",
+            "Availability",
+            "Transport",
+            "Behavior",
+            "Capability",
+            "Identity",
+            "emit automatic statistical drift alerts",
+            "Wilson or beta-binomial",
+        ):
+            self.assertIn(phrase, stability)
 
 
 if __name__ == "__main__":

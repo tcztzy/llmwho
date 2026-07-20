@@ -18,7 +18,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=18"
@@ -42,9 +43,12 @@
   "scripts": {
     "build": "node build.mjs",
     "test": "node --test test/*.test.js",
+    "typecheck": "tsc --noEmit",
     "prepack": "npm run build"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0"
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.0"
   }
 }

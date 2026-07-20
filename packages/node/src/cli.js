@@ -1,6 +1,8 @@
 import { NDJSONStore } from "./storage.js";
 import { summarize } from "./summary.js";
 import { VERSION } from "./version.js";
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 function option(args, name, fallback) {
   const index = args.indexOf(name);
@@ -58,6 +60,13 @@ export async function main(argv = process.argv.slice(2)) {
   return 2;
 }
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+let isMain = false;
+try {
+  isMain = Boolean(process.argv[1])
+    && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+} catch {
+  isMain = false;
+}
+if (isMain) {
   process.exitCode = await main();
 }
