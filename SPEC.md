@@ -12,7 +12,7 @@
 - secrets/API keys ∉ events, logs, errors, dashboard
 - active network requests only after explicit user call
 - identity result probabilistic; uncertainty/`unknown` first-class; ⊥ unsupported certainty claims
-- Python `>=3.10`; Node `>=18`; TypeScript source + ESM/CJS declarations
+- Python `>=3.10`; Node `>=18`; TypeScript declarations + ESM/CJS outputs
 - optional HTTP libraries remain optional imports
 - OpenAI-compatible transport first; passive generic detection for known LLM routes
 - dashboard binds loopback by default
@@ -60,7 +60,7 @@ T1|x|scaffold monorepo, vision, license, contributor metadata|V3,V5,V6,V9,V16
 T2|x|research black-box LLM fingerprinting, attribution, provenance, drift, reliability; write cited synthesis|V6,V16
 T3|x|define shared `ObservationV1`, privacy/redaction, NDJSON storage, identity evidence, summary math|V2,V3,V6,V7,V8,V10
 T4|x|implement Python `init()` hooks, API, CLI, tests|V1,V2,V3,V4,V5,V11,V15,I.py
-T5|.|implement npm `init()` fetch hook, API, CLI, tests|V1,V2,V3,V4,V5,V7,V11,I.js
+T5|x|implement npm `init()` fetch hook, API, CLI, tests|V1,V2,V3,V4,V5,V7,V11,I.js
 T6|.|implement deterministic active smoke probe & report in Python/JS|V5,V6,V8,V12,V13,I.py,I.js
 T7|.|implement shared local dashboard & stability/identity views|V8,V9,V10,V14,I.dashboard
 T8|.|write README/tutorial/limitations; run cross-language release verification|V6,V16,V17

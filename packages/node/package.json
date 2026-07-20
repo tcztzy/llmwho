@@ -3,13 +3,21 @@
   "version": "0.1.0",
   "description": "Passive LLM endpoint identity and stability instrumentation",
   "type": "module",
-  "exports": "./src/index.js",
-  "types": "./src/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "types": "./dist/index.d.ts",
   "bin": {
-    "llmwho": "./src/cli.js"
+    "llmwho": "./dist/cli.js"
   },
   "files": [
-    "src",
+    "dist",
     "README.md"
   ],
   "engines": {
@@ -32,6 +40,11 @@
   },
   "homepage": "https://github.com/tcztzy/llmwho#readme",
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "build": "node build.mjs",
+    "test": "node --test test/*.test.js",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
   }
 }

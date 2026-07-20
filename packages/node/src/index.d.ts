@@ -23,6 +23,19 @@ export interface ObservationV1 {
 }
 
 export const VERSION: string;
+export interface InitOptions {
+  storagePath?: string;
+  captureContent?: boolean;
+  endpoint?: string | ((url: string) => boolean);
+}
+export class HookHandle {
+  readonly store: NDJSONStore;
+  readonly endpoint?: InitOptions["endpoint"];
+  readonly captureContent: false;
+  active: boolean;
+  shutdown(): void;
+}
+export function init(options?: InitOptions): HookHandle;
 export function inferIdentity(claimedModel?: string, declaredModel?: string, responseHeaders?: Record<string, string>): ObservationV1["identity"];
 export function newObservation(options: Record<string, unknown>): ObservationV1;
 export function validateObservation(event: ObservationV1): void;
