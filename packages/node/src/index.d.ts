@@ -36,6 +36,28 @@ export class HookHandle {
   shutdown(): void;
 }
 export function init(options?: InitOptions): HookHandle;
+export interface ProbeOptions {
+  baseUrl: string;
+  model: string;
+  apiKey?: string;
+  suite?: "smoke";
+  storagePath?: string;
+  timeoutMs?: number;
+  fetchImpl?: typeof fetch;
+}
+export interface ProbeReport {
+  schema_version: "1";
+  suite: "smoke";
+  model: string;
+  endpoint: ObservationV1["endpoint"];
+  started_at: string;
+  completed_at: string;
+  completed: boolean;
+  capability: { passed: number; total: number; mean_score: number };
+  identity: { statuses: Record<string, number>; observed_models: Record<string, number> };
+  cases: Array<Record<string, unknown>>;
+}
+export function probe(options: ProbeOptions): Promise<ProbeReport>;
 export function inferIdentity(claimedModel?: string, declaredModel?: string, responseHeaders?: Record<string, string>): ObservationV1["identity"];
 export function newObservation(options: Record<string, unknown>): ObservationV1;
 export function validateObservation(event: ObservationV1): void;

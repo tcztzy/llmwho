@@ -23,6 +23,10 @@ const SECRET_HEADERS = new Set([
 
 let activeHandle;
 
+export function unhookedFetch() {
+  return activeHandle?.active ? activeHandle.originalFetch : globalThis.fetch;
+}
+
 function enabled() {
   return !["1", "true", "yes", "on"].includes(
     String(process.env.LLMWHO_DISABLED ?? "").trim().toLowerCase(),

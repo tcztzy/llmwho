@@ -29,6 +29,7 @@ def new_observation(
     response_headers: Optional[Mapping[str, str]] = None,
     request: Optional[Mapping[str, Any]] = None,
     response: Optional[Mapping[str, Any]] = None,
+    probe: Optional[Mapping[str, Any]] = None,
     redactions: int = 0,
 ) -> dict[str, Any]:
     event: dict[str, Any] = {
@@ -47,6 +48,8 @@ def new_observation(
         event["request"] = dict(request)
     if response:
         event["response"] = dict(response)
+    if probe:
+        event["probe"] = dict(probe)
     validate_observation(event)
     return event
 

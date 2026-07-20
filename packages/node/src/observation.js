@@ -22,6 +22,7 @@ export function newObservation({
   responseHeaders,
   request,
   response,
+  probe,
   redactions = 0,
 }) {
   const event = {
@@ -38,6 +39,7 @@ export function newObservation({
   };
   if (request) event.request = { ...request };
   if (response) event.response = { ...response };
+  if (probe) event.probe = { ...probe };
   validateObservation(event);
   return event;
 }
