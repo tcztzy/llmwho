@@ -63,7 +63,7 @@ T4|x|implement Python `init()` hooks, API, CLI, tests|V1,V2,V3,V4,V5,V11,V15,I.p
 T5|x|implement npm `init()` fetch hook, API, CLI, tests|V1,V2,V3,V4,V5,V7,V11,I.js
 T6|x|implement deterministic active smoke probe & report in Python/JS|V5,V6,V8,V12,V13,I.py,I.js
 T7|x|implement shared local dashboard & stability/identity views|V8,V9,V10,V14,I.dashboard
-T8|~|write README/tutorial/limitations; run cross-language release verification|V6,V16,V17
+T8|x|write README/tutorial/limitations; run cross-language release verification|V6,V16,V17
 T9|.|create GitHub repo, push source, publish PyPI/npm, tag release, install-verify registry artifacts|V17,V18
 
 ## §B BUGS
