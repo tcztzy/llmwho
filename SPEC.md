@@ -58,7 +58,7 @@ V18: published npm/PyPI artifacts version match git tag & expose §I interfaces
 id|status|task|cites
 T1|x|scaffold monorepo, vision, license, contributor metadata|V3,V5,V6,V9,V16
 T2|x|research black-box LLM fingerprinting, attribution, provenance, drift, reliability; write cited synthesis|V6,V16
-T3|.|define shared `ObservationV1`, privacy/redaction, NDJSON storage, identity evidence, summary math|V2,V3,V6,V7,V8,V10
+T3|x|define shared `ObservationV1`, privacy/redaction, NDJSON storage, identity evidence, summary math|V2,V3,V6,V7,V8,V10
 T4|.|implement Python `init()` hooks, API, CLI, tests|V1,V2,V3,V4,V5,V11,V15,I.py
 T5|.|implement npm `init()` fetch hook, API, CLI, tests|V1,V2,V3,V4,V5,V7,V11,I.js
 T6|.|implement deterministic active smoke probe & report in Python/JS|V5,V6,V8,V12,V13,I.py,I.js

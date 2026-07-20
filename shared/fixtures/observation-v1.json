@@ -1,0 +1,64 @@
+{
+  "schema_version": "1",
+  "event_id": "fixture-0001",
+  "timestamp": "2026-07-20T00:00:00Z",
+  "source": "passive",
+  "modality": "text",
+  "sdk": {
+    "name": "llmwho-fixture",
+    "version": "0.1.0"
+  },
+  "endpoint": {
+    "scheme": "https",
+    "host": "api.example.test",
+    "path": "/v1/chat/completions",
+    "provider": "openai-compatible"
+  },
+  "request": {
+    "operation": "chat.completions",
+    "claimed_model": "claimed-model",
+    "stream": false,
+    "input_bytes": 128,
+    "role_count": 2
+  },
+  "response": {
+    "declared_model": "observed-model",
+    "system_fingerprint": "fp_fixture",
+    "status_code": 200,
+    "output_bytes": 64,
+    "usage": {
+      "input_tokens": 12,
+      "output_tokens": 7,
+      "total_tokens": 19
+    }
+  },
+  "transport": {
+    "outcome": "success",
+    "duration_ms": 123.5,
+    "ttft_ms": 45.5
+  },
+  "identity": {
+    "status": "mismatch",
+    "claimed_model": "claimed-model",
+    "observed_model": "observed-model",
+    "confidence": 0.98,
+    "candidates": [
+      {
+        "label": "observed-model",
+        "confidence": 0.98
+      }
+    ],
+    "evidence": [
+      {
+        "kind": "response_model",
+        "source": "response.body.model",
+        "value": "observed-model",
+        "weight": 0.98
+      }
+    ]
+  },
+  "privacy": {
+    "content_captured": false,
+    "redactions": 1
+  }
+}

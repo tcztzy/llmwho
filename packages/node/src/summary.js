@@ -1,0 +1,50 @@
+export function quantile(values, probability) {
+  if (!values.length) return null;
+  if (!(probability >= 0 && probability <= 1)) {
+    throw new Error("probability must be between 0 and 1");
+  }
+  const ordered = values.map(Number).sort((a, b) => a - b);
+  const index = (ordered.length - 1) * probability;
+  const lower = Math.floor(index);
+  const upper = Math.min(lower + 1, ordered.length - 1);
+  const fraction = index - lower;
+  return ordered[lower] + (ordered[upper] - ordered[lower]) * fraction;
+}
+
+function counts(values) {
+  const result = {};
+  for (const value of values) result[value] = (result[value] ?? 0) + 1;
+  return Object.fromEntries(Object.entries(result).sort(([a], [b]) => a.localeCompare(b)));
+}
+
+export function summarize(events) {
+  const rows = [...events];
+  const outcomes = counts(rows.map((row) => row.transport.outcome));
+  const statuses = counts(rows.map((row) => row.identity.status));
+  const observedModels = counts(
+    rows.map((row) => row.identity.observed_model).filter(Boolean),
+  );
+  const durations = rows.map((row) => Number(row.transport.duration_ms));
+  const probeScores = rows.filter((row) => row.probe).map((row) => Number(row.probe.score));
+  return {
+    events: rows.length,
+    availability: {
+      success_rate: rows.length ? (outcomes.success ?? 0) / rows.length : null,
+      outcomes,
+    },
+    transport: {
+      latency_ms: {
+        p50: quantile(durations, 0.5),
+        p95: quantile(durations, 0.95),
+        p99: quantile(durations, 0.99),
+      },
+    },
+    identity: { statuses, observed_models: observedModels },
+    capability: {
+      probe_count: probeScores.length,
+      mean_score: probeScores.length
+        ? probeScores.reduce((sum, value) => sum + value, 0) / probeScores.length
+        : null,
+    },
+  };
+}

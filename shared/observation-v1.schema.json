@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwho.dev/schema/observation-v1.json",
+  "title": "LLMWho ObservationV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "timestamp",
+    "source",
+    "modality",
+    "sdk",
+    "endpoint",
+    "transport",
+    "identity",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "event_id": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "source": { "enum": ["passive", "probe"] },
+    "modality": {
+      "enum": ["text", "image", "audio", "embedding", "multimodal", "unknown"]
+    },
+    "sdk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scheme", "host", "path"],
+      "properties": {
+        "scheme": { "enum": ["http", "https", "unknown"] },
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "path": { "type": "string" },
+        "provider": { "type": "string" }
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operation": { "type": "string" },
+        "claimed_model": { "type": "string" },
+        "stream": { "type": "boolean" },
+        "input_bytes": { "type": "integer", "minimum": 0 },
+        "role_count": { "type": "integer", "minimum": 0 },
+        "probe_case_id": { "type": "string" }
+      }
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "declared_model": { "type": "string" },
+        "system_fingerprint": { "type": "string" },
+        "status_code": { "type": "integer", "minimum": 100, "maximum": 599 },
+        "output_bytes": { "type": "integer", "minimum": 0 },
+        "usage": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "input_tokens": { "type": "integer", "minimum": 0 },
+            "output_tokens": { "type": "integer", "minimum": 0 },
+            "total_tokens": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "duration_ms"],
+      "properties": {
+        "outcome": {
+          "enum": ["success", "http_error", "timeout", "network_error", "stream_error"]
+        },
+        "duration_ms": { "type": "number", "minimum": 0 },
+        "ttft_ms": { "type": "number", "minimum": 0 },
+        "error_type": { "type": "string" }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "confidence", "candidates", "evidence"],
+      "properties": {
+        "status": { "enum": ["matched", "mismatch", "unknown"] },
+        "claimed_model": { "type": "string" },
+        "observed_model": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "confidence"],
+            "properties": {
+              "label": { "type": "string" },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "source", "weight"],
+            "properties": {
+              "kind": { "type": "string" },
+              "source": { "type": "string" },
+              "value": { "type": "string" },
+              "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_id", "passed", "score"],
+      "properties": {
+        "case_id": { "type": "string" },
+        "passed": { "type": "boolean" },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "check": { "type": "string" }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_captured", "redactions"],
+      "properties": {
+        "content_captured": { "const": false },
+        "redactions": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

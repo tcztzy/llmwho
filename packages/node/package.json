@@ -1,0 +1,37 @@
+{
+  "name": "llmwho",
+  "version": "0.1.0",
+  "description": "Passive LLM endpoint identity and stability instrumentation",
+  "type": "module",
+  "exports": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "bin": {
+    "llmwho": "./src/cli.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "llm",
+    "observability",
+    "fingerprinting",
+    "stability",
+    "middleware"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tcztzy/llmwho.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tcztzy/llmwho/issues"
+  },
+  "homepage": "https://github.com/tcztzy/llmwho#readme",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}
