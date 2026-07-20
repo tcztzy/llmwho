@@ -13,6 +13,7 @@ class RepositoryContractTests(unittest.TestCase):
             "SPEC.md",
             "docs/VISION.md",
             "docs/ROADMAP.md",
+            "docs/RESEARCH.md",
             "SECURITY.md",
         ):
             self.assertTrue((ROOT / relative).is_file(), relative)
@@ -36,6 +37,20 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Passive by default", readme)
         self.assertIn("probabilistic", readme)
         self.assertIn("No raw prompts or responses", readme)
+
+    def test_research_separates_evidence_status_and_product_claims(self) -> None:
+        research = (ROOT / "docs/RESEARCH.md").read_text(encoding="utf-8")
+        for phrase in (
+            "Peer-reviewed work most relevant",
+            "Directly relevant preprints",
+            "Evidence hierarchy",
+            "What the MVP will not claim",
+            "LLMmap",
+            "Model Equality Testing",
+            "Behavioral Fingerprints for LLM Endpoint Stability and Identity",
+            "one-call in-application passive hook",
+        ):
+            self.assertIn(phrase, research)
 
 
 if __name__ == "__main__":
