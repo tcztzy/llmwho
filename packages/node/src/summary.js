@@ -26,6 +26,9 @@ export function summarize(events) {
   );
   const durations = rows.map((row) => Number(row.transport.duration_ms));
   const probeScores = rows.filter((row) => row.probe).map((row) => Number(row.probe.score));
+  const outputSizes = rows
+    .filter((row) => row.response && "output_bytes" in row.response)
+    .map((row) => Number(row.response.output_bytes));
   return {
     events: rows.length,
     availability: {
@@ -40,6 +43,11 @@ export function summarize(events) {
       },
     },
     identity: { statuses, observed_models: observedModels },
+    behavior: {
+      observed_responses: outputSizes.length,
+      stream_requests: rows.filter((row) => row.request?.stream === true).length,
+      output_bytes_p50: quantile(outputSizes, 0.5),
+    },
     capability: {
       probe_count: probeScores.length,
       mean_score: probeScores.length

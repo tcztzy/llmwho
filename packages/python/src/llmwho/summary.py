@@ -33,6 +33,14 @@ def summarize(events: Iterable[dict]) -> dict:
     )
     probe_rows = [row for row in rows if row.get("probe")]
     probe_scores = [float(row["probe"]["score"]) for row in probe_rows]
+    output_sizes = [
+        float(row["response"]["output_bytes"])
+        for row in rows
+        if row.get("response") and "output_bytes" in row["response"]
+    ]
+    stream_requests = sum(
+        1 for row in rows if row.get("request", {}).get("stream") is True
+    )
     total = len(rows)
     return {
         "events": total,
@@ -50,6 +58,11 @@ def summarize(events: Iterable[dict]) -> dict:
         "identity": {
             "statuses": dict(sorted(identities.items())),
             "observed_models": dict(sorted(observed.items())),
+        },
+        "behavior": {
+            "observed_responses": len(output_sizes),
+            "stream_requests": stream_requests,
+            "output_bytes_p50": quantile(output_sizes, 0.5),
         },
         "capability": {
             "probe_count": len(probe_scores),

@@ -21,7 +21,7 @@ await build({
   target: "node18",
   format: "esm",
   outfile: "dist/cli.js",
-  external: ["./dashboard.js"],
   banner: { js: "#!/usr/bin/env node" },
 });
 await cp("src/index.d.ts", "dist/index.d.ts");
+await cp("../python/src/llmwho/dashboard.html", "dist/dashboard.html");
