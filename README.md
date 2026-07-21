@@ -116,6 +116,22 @@ operation, model, stream, role-count, byte-count, status, and token-usage
 fields. SDK streaming calls are observed without reading or cloning their
 response bodies.
 
+### Claude Code and Codex project hooks
+
+When an agent owns its HTTP transport, configure its project lifecycle hooks
+to call the same content-free observer:
+
+```bash
+llmwho hook claude-code --event Stop
+llmwho hook codex --event Stop
+```
+
+The commands read official hook JSON from stdin; users should configure them,
+not run them by hand. Copy or merge the ready-made
+[Claude Code](examples/hooks/claude-code.settings.json) and
+[Codex](examples/hooks/codex.hooks.json) templates. See
+[Agent hook setup, privacy, and limits](docs/AGENT_HOOKS.md).
+
 Repeated `init()` calls return the same active handle; they do not stack hook
 layers. By default, events are appended to `~/.llmwho/events.ndjson`.
 

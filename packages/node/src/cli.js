@@ -56,7 +56,20 @@ export async function main(argv = process.argv.slice(2)) {
     process.stdout.write(`${JSON.stringify(report)}\n`);
     return report.completed ? 0 : 1;
   }
-  process.stderr.write("usage: llmwho summary|dashboard|probe [options]\n");
+  if (command === "hook") {
+    const client = argv[1];
+    if (!["claude-code", "codex"].includes(client)) {
+      process.stderr.write("usage: llmwho hook claude-code|codex [options]\n");
+      return 2;
+    }
+    const { runHookCli } = await import("./agent-hooks.js");
+    return runHookCli({
+      client,
+      expectedEvent: option(argv, "--event", undefined),
+      storagePath: option(argv, "--storage", undefined),
+    });
+  }
+  process.stderr.write("usage: llmwho summary|dashboard|probe|hook [options]\n");
   return 2;
 }
 

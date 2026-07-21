@@ -33,6 +33,11 @@ recognized LLM routes. It writes content-free observations to
 streaming responses are not consumed, and `handle.shutdown()` safely restores
 only LLMWho-owned patches.
 
+The CLI also accepts content-free Claude Code and Codex lifecycle events:
+`llmwho hook claude-code|codex --event EVENT`. Project configuration and
+privacy details are in the
+[agent hook guide](https://github.com/tcztzy/llmwho/blob/main/docs/AGENT_HOOKS.md).
+
 Run an explicit OpenAI-compatible compatibility canary:
 
 ```python

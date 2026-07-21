@@ -31,6 +31,11 @@ def _parser() -> argparse.ArgumentParser:
     probe.add_argument("--api-key-env", default="OPENAI_API_KEY")
     probe.add_argument("--suite", default="smoke")
     probe.add_argument("--storage")
+
+    hook = commands.add_parser("hook", help="observe an agent lifecycle hook")
+    hook.add_argument("client", choices=("claude-code", "codex"))
+    hook.add_argument("--event")
+    hook.add_argument("--storage")
     return parser
 
 
@@ -71,6 +76,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         )
         print(json.dumps(report, ensure_ascii=False, sort_keys=True))
         return 0 if report["completed"] else 1
+    if args.command == "hook":
+        from .agent_hooks import run_hook_cli
+
+        return run_hook_cli(
+            args.client,
+            expected_event=args.event,
+            storage_path=args.storage,
+        )
     return 2
 
 

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import unittest
 
@@ -15,6 +16,9 @@ class RepositoryContractTests(unittest.TestCase):
             "docs/ROADMAP.md",
             "docs/RESEARCH.md",
             "docs/STABILITY.md",
+            "docs/AGENT_HOOKS.md",
+            "examples/hooks/claude-code.settings.json",
+            "examples/hooks/codex.hooks.json",
             "SECURITY.md",
         ):
             self.assertTrue((ROOT / relative).is_file(), relative)
@@ -75,6 +79,43 @@ class RepositoryContractTests(unittest.TestCase):
             "Wilson or beta-binomial",
         ):
             self.assertIn(phrase, stability)
+
+    def test_agent_hook_templates_match_public_cli_and_privacy_contract(self) -> None:
+        claude = json.loads(
+            (ROOT / "examples/hooks/claude-code.settings.json").read_text()
+        )
+        codex = json.loads((ROOT / "examples/hooks/codex.hooks.json").read_text())
+        self.assertEqual(
+            set(claude["hooks"]),
+            {
+                "SessionStart",
+                "UserPromptSubmit",
+                "Stop",
+                "StopFailure",
+                "SessionEnd",
+            },
+        )
+        for event, groups in claude["hooks"].items():
+            command = groups[0]["hooks"][0]
+            self.assertEqual(command["command"], "llmwho")
+            self.assertEqual(
+                command["args"],
+                ["hook", "claude-code", "--event", event],
+            )
+        self.assertEqual(set(codex["hooks"]), {"UserPromptSubmit", "Stop"})
+        for event, groups in codex["hooks"].items():
+            command = groups[0]["hooks"][0]["command"]
+            self.assertEqual(command, f"llmwho hook codex --event {event}")
+
+        guide = (ROOT / "docs/AGENT_HOOKS.md").read_text()
+        for phrase in (
+            "never sends network traffic",
+            "does not persist or read",
+            "session IDs, turn IDs, API keys",
+            "Malformed JSON, oversized input, state failure",
+            "identity remains `unknown`",
+        ):
+            self.assertIn(phrase, guide)
 
 
 if __name__ == "__main__":

@@ -32,6 +32,7 @@
 - js-cli: `npx llmwho summary|dashboard|probe ...`
 - event: NDJSON `ObservationV1` with `schema_version="1"`, timestamp, SDK, endpoint, transport, identity, behavior, privacy fields
 - anthropic: passive py/js hooks recognize direct `POST /v1/messages`; normalize `endpoint.provider="anthropic"`, `request.operation="messages"`, claimed model, stream, role count, byte counts, declared model, status, and input/output/total token usage; stream body ⊥ read/clone
+- agent-hook-cli: `llmwho hook claude-code|codex [--event EVENT] [--storage PATH]` reads one official lifecycle-hook JSON object from stdin; project `.claude/settings.json` / `.codex/hooks.json` configs emit content-free passive turn observations
 - dashboard: local `GET /`, `GET /api/summary`, `GET /api/events`
 - env: `LLMWHO_STORAGE`, `LLMWHO_CAPTURE_CONTENT`, `LLMWHO_DISABLED`
 
@@ -55,6 +56,8 @@ V16: research doc separates published evidence, preprints, inference, and produc
 V17: release gates → Python tests/build/install & Node tests/build/install pass before registry upload
 V18: published npm/PyPI artifacts version match git tag & expose §I interfaces
 V19: direct Anthropic Messages observations → same normalized Python/JS fields; when both counts exist `total_tokens=input_tokens+output_tokens`; malformed/absent metadata omitted
+V20: Claude Code/Codex hook adapter → exit 0 & protocol-neutral stdout despite malformed input/telemetry failure; ⊥ network, transcript read, prompt/response/tool content, session/turn IDs persistence
+V21: hook state → hashed session filename + safe model/start time/input byte count only; Python/JS turn event parity for provider, operation, model, duration, outcome, input/output bytes, privacy
 
 ## §T TASKS
 id|status|task|cites
@@ -68,6 +71,7 @@ T7|x|implement shared local dashboard & stability/identity views|V8,V9,V10,V14,I
 T8|x|write README/tutorial/limitations; run cross-language release verification|V6,V16,V17
 T9|x|create GitHub repo, push source, publish PyPI/npm, tag release, install-verify registry artifacts|V17,V18
 T10|x|implement direct Anthropic Messages adapter, parity/privacy/stream tests, concise README examples|V1,V2,V3,V4,V5,V7,V11,V13,V15,V19,I.anthropic
+T11|x|implement Claude Code/Codex project-hook CLI adapters, safe turn state, configs, parity/fail-open tests, docs|V2,V3,V4,V5,V7,V8,V13,V15,V20,V21,I.agent-hook-cli
 
 ## §B BUGS
 id|date|cause|fix

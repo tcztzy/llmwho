@@ -22,6 +22,7 @@ def new_observation(
     url: str,
     duration_ms: float,
     outcome: str,
+    error_type: Optional[str] = None,
     source: str = "passive",
     modality: str = "text",
     provider: Optional[str] = None,
@@ -47,6 +48,8 @@ def new_observation(
     }
     if provider:
         event["endpoint"]["provider"] = provider
+    if error_type:
+        event["transport"]["error_type"] = error_type
     if request:
         event["request"] = dict(request)
     if response:
