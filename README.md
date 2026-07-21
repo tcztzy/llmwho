@@ -81,6 +81,41 @@ await client.chat.completions.create({
 telemetry.shutdown();
 ```
 
+### Direct Anthropic Messages API
+
+Anthropic SDK stays an application dependency; LLMWho does not import it:
+
+```python
+import llmwho
+from anthropic import Anthropic
+
+llmwho.init()
+client = Anthropic()
+message = client.messages.create(
+    model="claude-sonnet-4-20250514",
+    max_tokens=64,
+    messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+```js
+import Anthropic from "@anthropic-ai/sdk";
+import { init } from "llmwho";
+
+init();
+const client = new Anthropic();
+const message = await client.messages.create({
+  model: "claude-sonnet-4-20250514",
+  max_tokens: 64,
+  messages: [{ role: "user", content: "Hello" }],
+});
+```
+
+Direct `api.anthropic.com/v1/messages` observations normalize provider,
+operation, model, stream, role-count, byte-count, status, and token-usage
+fields. SDK streaming calls are observed without reading or cloning their
+response bodies.
+
 Repeated `init()` calls return the same active handle; they do not stack hook
 layers. By default, events are appended to `~/.llmwho/events.ndjson`.
 

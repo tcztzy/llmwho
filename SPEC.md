@@ -31,6 +31,7 @@
 - cli: `llmwho probe --base-url URL --model ID [--api-key-env NAME] [--suite smoke]`
 - js-cli: `npx llmwho summary|dashboard|probe ...`
 - event: NDJSON `ObservationV1` with `schema_version="1"`, timestamp, SDK, endpoint, transport, identity, behavior, privacy fields
+- anthropic: passive py/js hooks recognize direct `POST /v1/messages`; normalize `endpoint.provider="anthropic"`, `request.operation="messages"`, claimed model, stream, role count, byte counts, declared model, status, and input/output/total token usage; stream body ⊥ read/clone
 - dashboard: local `GET /`, `GET /api/summary`, `GET /api/events`
 - env: `LLMWHO_STORAGE`, `LLMWHO_CAPTURE_CONTENT`, `LLMWHO_DISABLED`
 
@@ -53,6 +54,7 @@ V15: package import succeeds without `requests`, `httpx`, dashboard extras, or p
 V16: research doc separates published evidence, preprints, inference, and product decisions
 V17: release gates → Python tests/build/install & Node tests/build/install pass before registry upload
 V18: published npm/PyPI artifacts version match git tag & expose §I interfaces
+V19: direct Anthropic Messages observations → same normalized Python/JS fields; when both counts exist `total_tokens=input_tokens+output_tokens`; malformed/absent metadata omitted
 
 ## §T TASKS
 id|status|task|cites
@@ -65,6 +67,7 @@ T6|x|implement deterministic active smoke probe & report in Python/JS|V5,V6,V8,V
 T7|x|implement shared local dashboard & stability/identity views|V8,V9,V10,V14,I.dashboard
 T8|x|write README/tutorial/limitations; run cross-language release verification|V6,V16,V17
 T9|x|create GitHub repo, push source, publish PyPI/npm, tag release, install-verify registry artifacts|V17,V18
+T10|x|implement direct Anthropic Messages adapter, parity/privacy/stream tests, concise README examples|V1,V2,V3,V4,V5,V7,V11,V13,V15,V19,I.anthropic
 
 ## §B BUGS
 id|date|cause|fix

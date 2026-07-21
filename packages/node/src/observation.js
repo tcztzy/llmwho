@@ -17,6 +17,7 @@ export function newObservation({
   outcome,
   source = "passive",
   modality = "text",
+  provider,
   claimedModel,
   declaredModel,
   responseHeaders,
@@ -37,6 +38,7 @@ export function newObservation({
     identity: inferIdentity(claimedModel, declaredModel, responseHeaders),
     privacy: { content_captured: false, redactions: Math.max(0, redactions) },
   };
+  if (provider) event.endpoint.provider = provider;
   if (request) event.request = { ...request };
   if (response) event.response = { ...response };
   if (probe) event.probe = { ...probe };

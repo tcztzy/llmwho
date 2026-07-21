@@ -12,6 +12,21 @@ import llmwho
 handle = llmwho.init()
 ```
 
+Direct Anthropic Messages API calls need no LLMWho-specific wrapper:
+
+```python
+import llmwho
+from anthropic import Anthropic
+
+llmwho.init()
+client = Anthropic()
+client.messages.create(
+    model="claude-sonnet-4-20250514",
+    max_tokens=64,
+    messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
 One call instruments installed HTTPX (sync and async) and requests clients for
 recognized LLM routes. It writes content-free observations to
 `~/.llmwho/events.ndjson`; it never sends active traffic. Calls are idempotent,

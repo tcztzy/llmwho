@@ -12,6 +12,21 @@ import { init } from "llmwho";
 const handle = init();
 ```
 
+Direct Anthropic Messages API calls need no LLMWho-specific wrapper:
+
+```js
+import Anthropic from "@anthropic-ai/sdk";
+import { init } from "llmwho";
+
+init();
+const client = new Anthropic();
+await client.messages.create({
+  model: "claude-sonnet-4-20250514",
+  max_tokens: 64,
+  messages: [{ role: "user", content: "Hello" }],
+});
+```
+
 One call instruments `globalThis.fetch` for recognized LLM routes. It writes
 content-free observations to `~/.llmwho/events.ndjson`; it never sends active
 traffic. Calls are idempotent, streaming responses are not consumed, and

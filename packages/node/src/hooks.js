@@ -1,4 +1,10 @@
 import { performance } from "node:perf_hooks";
+import {
+  ANTHROPIC_PROVIDER,
+  anthropicRequestMetadata,
+  anthropicResponseMetadata,
+  isAnthropicMessagesUrl,
+} from "./anthropic.js";
 import { newObservation } from "./observation.js";
 import { NDJSONStore } from "./storage.js";
 
@@ -115,6 +121,10 @@ function operation(path) {
 }
 
 function requestMetadata(url, payload, bytes) {
+  if (isAnthropicMessagesUrl(url)) {
+    const [metadata, claimedModel] = anthropicRequestMetadata(payload, bytes);
+    return [metadata, claimedModel, ANTHROPIC_PROVIDER];
+  }
   const result = { operation: operation(new URL(url).pathname), input_bytes: bytes };
   let claimedModel;
   if (payload) {
@@ -125,10 +135,13 @@ function requestMetadata(url, payload, bytes) {
     if (typeof payload.stream === "boolean") result.stream = payload.stream;
     if (Array.isArray(payload.messages)) result.role_count = payload.messages.length;
   }
-  return [result, claimedModel];
+  return [result, claimedModel, undefined];
 }
 
-function responseMetadata(payload, bytes, status) {
+function responseMetadata(payload, bytes, status, provider) {
+  if (provider === ANTHROPIC_PROVIDER) {
+    return anthropicResponseMetadata(payload, bytes, status);
+  }
   const result = { status_code: status, output_bytes: bytes };
   let declaredModel;
   if (payload) {
@@ -179,6 +192,18 @@ function observe(handle, fields) {
   }
 }
 
+function isStreamingResponse(context, response) {
+  if (context.request.stream === true) return true;
+  try {
+    return response.headers.get("content-type")
+      ?.split(";", 1)[0]
+      .trim()
+      .toLowerCase() === "text/event-stream";
+  } catch {
+    return false;
+  }
+}
+
 function recordResponse(handle, context, response) {
   const common = {
     url: context.url,
@@ -187,26 +212,37 @@ function recordResponse(handle, context, response) {
       ? "success"
       : "http_error",
     claimedModel: context.claimedModel,
+    provider: context.provider,
     responseHeaders: responseHeaders(response),
     request: context.request,
     redactions: context.redactions,
   };
-  if (context.request.stream) {
-    const [metadata, declaredModel] = responseMetadata(undefined, 0, response.status);
+  if (isStreamingResponse(context, response)) {
+    const [metadata, declaredModel] = responseMetadata(
+      undefined,
+      0,
+      response.status,
+      context.provider,
+    );
     observe(handle, { ...common, declaredModel, response: metadata });
     return;
   }
   try {
     response.clone().arrayBuffer().then((buffer) => {
       const [payload] = jsonBody(new Uint8Array(buffer));
-      const [metadata, declaredModel] = responseMetadata(payload, buffer.byteLength, response.status);
+      const [metadata, declaredModel] = responseMetadata(
+        payload,
+        buffer.byteLength,
+        response.status,
+        context.provider,
+      );
       observe(handle, { ...common, declaredModel, response: metadata });
     }).catch(() => {
-      const [metadata] = responseMetadata(undefined, 0, response.status);
+      const [metadata] = responseMetadata(undefined, 0, response.status, context.provider);
       observe(handle, { ...common, response: metadata });
     });
   } catch {
-    const [metadata] = responseMetadata(undefined, 0, response.status);
+    const [metadata] = responseMetadata(undefined, 0, response.status, context.provider);
     observe(handle, { ...common, response: metadata });
   }
 }
@@ -253,8 +289,9 @@ export function init(options = {}) {
     const [payload, bytes] = jsonBody(requestInit?.body);
     let request;
     let claimedModel;
+    let provider;
     try {
-      [request, claimedModel] = requestMetadata(url, payload, bytes);
+      [request, claimedModel, provider] = requestMetadata(url, payload, bytes);
     } catch {
       request = { operation: "unknown", input_bytes: bytes };
     }
@@ -269,6 +306,7 @@ export function init(options = {}) {
         outcome: String(error?.name ?? "").toLowerCase().includes("timeout")
           ? "timeout"
           : "network_error",
+        provider,
         claimedModel,
         request,
         redactions,
@@ -276,7 +314,11 @@ export function init(options = {}) {
       throw error;
     }
     try {
-      recordResponse(handle, { url, started, request, claimedModel, redactions }, response);
+      recordResponse(
+        handle,
+        { url, started, request, claimedModel, provider, redactions },
+        response,
+      );
     } catch {
       // Response telemetry must never replace a successful application result.
     }

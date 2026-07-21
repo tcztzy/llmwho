@@ -24,6 +24,7 @@ def new_observation(
     outcome: str,
     source: str = "passive",
     modality: str = "text",
+    provider: Optional[str] = None,
     claimed_model: Optional[str] = None,
     declared_model: Optional[str] = None,
     response_headers: Optional[Mapping[str, str]] = None,
@@ -44,6 +45,8 @@ def new_observation(
         "identity": infer_identity(claimed_model, declared_model, response_headers),
         "privacy": {"content_captured": False, "redactions": max(0, redactions)},
     }
+    if provider:
+        event["endpoint"]["provider"] = provider
     if request:
         event["request"] = dict(request)
     if response:

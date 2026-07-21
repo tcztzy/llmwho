@@ -6,6 +6,7 @@
 - Python hooks for `requests` and `httpx`.
 - Node hook for `globalThis.fetch`.
 - OpenAI-compatible passive response parsing.
+- Direct Anthropic Messages API normalization.
 - Deterministic active smoke probes.
 - Evidence-based identity result with explicit `unknown`.
 - Local service, behavior, capability, and identity dashboard.
@@ -13,7 +14,7 @@
 
 ## Next
 
-- Direct OpenAI, Anthropic, Google, and popular gateway adapters.
+- Direct OpenAI, Google, and popular gateway adapters.
 - Streaming time-to-first-token and inter-token stall instrumentation.
 - Reference-profile collection and signed community fingerprint bundles.
 - Adaptive probes selected by expected information gain.

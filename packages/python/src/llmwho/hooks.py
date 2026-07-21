@@ -13,6 +13,12 @@ from time import perf_counter
 from typing import Any, Callable, Mapping, Optional
 from urllib.parse import parse_qsl, urlsplit
 
+from .anthropic import (
+    PROVIDER as ANTHROPIC_PROVIDER,
+    is_messages_url as is_anthropic_messages_url,
+    request_metadata as anthropic_request_metadata,
+    response_metadata as anthropic_response_metadata,
+)
 from .observation import new_observation
 from .privacy import SENSITIVE_HEADERS
 from .storage import NDJSONStore
@@ -123,6 +129,27 @@ def _response_metadata(payload: Optional[Mapping[str, Any]], size: int, status_c
     return metadata, declared
 
 
+def _normalized_request_metadata(
+    url: str, payload: Optional[Mapping[str, Any]], size: int
+) -> tuple[dict[str, Any], Optional[str], Optional[str]]:
+    if is_anthropic_messages_url(url):
+        metadata, claimed = anthropic_request_metadata(payload, size)
+        return metadata, claimed, ANTHROPIC_PROVIDER
+    metadata, claimed = _request_metadata(payload, size, urlsplit(url).path)
+    return metadata, claimed, None
+
+
+def _normalized_response_metadata(
+    provider: Optional[str],
+    payload: Optional[Mapping[str, Any]],
+    size: int,
+    status_code: int,
+) -> tuple[dict[str, Any], Optional[str]]:
+    if provider == ANTHROPIC_PROVIDER:
+        return anthropic_response_metadata(payload, size, status_code)
+    return _response_metadata(payload, size, status_code)
+
+
 def _operation(path: str) -> str:
     lowered = path.lower()
     if "/chat/completions" in lowered:
@@ -208,7 +235,9 @@ def _install_httpx(handle: HookHandle, module: Any) -> None:
             return sync_original(client, request, *args, **kwargs)
         started = perf_counter()
         request_payload, request_size = _httpx_body(request)
-        request_meta, claimed = _request_metadata(request_payload, request_size, urlsplit(url).path)
+        request_meta, claimed, provider = _normalized_request_metadata(
+            url, request_payload, request_size
+        )
         redactions = _redaction_count(url, request.headers)
         try:
             response = sync_original(client, request, *args, **kwargs)
@@ -217,17 +246,21 @@ def _install_httpx(handle: HookHandle, module: Any) -> None:
                 url=url,
                 duration_ms=(perf_counter() - started) * 1000,
                 outcome=_exception_outcome(error),
+                provider=provider,
                 claimed_model=claimed,
                 request=request_meta,
                 redactions=redactions,
             )
             raise
         response_payload, response_size = _httpx_response_body(response)
-        response_meta, declared = _response_metadata(response_payload, response_size, response.status_code)
+        response_meta, declared = _normalized_response_metadata(
+            provider, response_payload, response_size, response.status_code
+        )
         handle._observe(
             url=url,
             duration_ms=(perf_counter() - started) * 1000,
             outcome=_outcome(response.status_code),
+            provider=provider,
             claimed_model=claimed,
             declared_model=declared,
             response_headers=dict(response.headers),
@@ -247,7 +280,9 @@ def _install_httpx(handle: HookHandle, module: Any) -> None:
             return await async_original(client, request, *args, **kwargs)
         started = perf_counter()
         request_payload, request_size = _httpx_body(request)
-        request_meta, claimed = _request_metadata(request_payload, request_size, urlsplit(url).path)
+        request_meta, claimed, provider = _normalized_request_metadata(
+            url, request_payload, request_size
+        )
         redactions = _redaction_count(url, request.headers)
         try:
             response = await async_original(client, request, *args, **kwargs)
@@ -256,17 +291,21 @@ def _install_httpx(handle: HookHandle, module: Any) -> None:
                 url=url,
                 duration_ms=(perf_counter() - started) * 1000,
                 outcome=_exception_outcome(error),
+                provider=provider,
                 claimed_model=claimed,
                 request=request_meta,
                 redactions=redactions,
             )
             raise
         response_payload, response_size = _httpx_response_body(response)
-        response_meta, declared = _response_metadata(response_payload, response_size, response.status_code)
+        response_meta, declared = _normalized_response_metadata(
+            provider, response_payload, response_size, response.status_code
+        )
         handle._observe(
             url=url,
             duration_ms=(perf_counter() - started) * 1000,
             outcome=_outcome(response.status_code),
+            provider=provider,
             claimed_model=claimed,
             declared_model=declared,
             response_headers=dict(response.headers),
@@ -288,7 +327,9 @@ def _install_requests(handle: HookHandle, module: Any) -> None:
             return original(session, request, **kwargs)
         started = perf_counter()
         request_payload, request_size = _json_mapping(request.body)
-        request_meta, claimed = _request_metadata(request_payload, request_size, urlsplit(url).path)
+        request_meta, claimed, provider = _normalized_request_metadata(
+            url, request_payload, request_size
+        )
         redactions = _redaction_count(url, request.headers)
         try:
             response = original(session, request, **kwargs)
@@ -297,6 +338,7 @@ def _install_requests(handle: HookHandle, module: Any) -> None:
                 url=url,
                 duration_ms=(perf_counter() - started) * 1000,
                 outcome=_exception_outcome(error),
+                provider=provider,
                 claimed_model=claimed,
                 request=request_meta,
                 redactions=redactions,
@@ -306,11 +348,14 @@ def _install_requests(handle: HookHandle, module: Any) -> None:
             response_payload, response_size = None, 0
         else:
             response_payload, response_size = _json_mapping(response.content)
-        response_meta, declared = _response_metadata(response_payload, response_size, response.status_code)
+        response_meta, declared = _normalized_response_metadata(
+            provider, response_payload, response_size, response.status_code
+        )
         handle._observe(
             url=url,
             duration_ms=(perf_counter() - started) * 1000,
             outcome=_outcome(response.status_code),
+            provider=provider,
             claimed_model=claimed,
             declared_model=declared,
             response_headers=dict(response.headers),
