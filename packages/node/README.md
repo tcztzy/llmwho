@@ -53,7 +53,7 @@ npx llmwho dashboard
 
 The package provides ESM and CommonJS entry points plus TypeScript declarations.
 Identity results are probabilistic evidence, not cryptographic attestation.
-Version 0.1 uses response model metadata; its smoke suite measures capability
+Version 0.2 uses response model metadata; its smoke suite measures capability
 and does not uniquely identify arbitrary model weights. Raw prompts, responses,
 headers, query strings, and credentials are never stored.
 

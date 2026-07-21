@@ -13,6 +13,7 @@ from urllib.request import Request, urlopen
 
 from .observation import new_observation
 from .storage import NDJSONStore
+from .version import __version__
 
 
 def _utc_now() -> str:
@@ -118,7 +119,9 @@ def probe(
     """Send the explicit smoke suite and return a content-free report."""
 
     if suite != "smoke":
-        raise ValueError("only the smoke suite is available in LLMWho 0.1")
+        raise ValueError(
+            f"only the smoke suite is available in LLMWho {__version__}"
+        )
     if not model or not isinstance(model, str):
         raise ValueError("model is required")
     if timeout <= 0:
@@ -144,7 +147,10 @@ def probe(
             },
             separators=(",", ":"),
         ).encode("utf-8")
-        headers = {"Content-Type": "application/json", "User-Agent": "llmwho/0.1"}
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": f"llmwho/{__version__}",
+        }
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
         started = perf_counter()

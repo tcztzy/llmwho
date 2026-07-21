@@ -5,7 +5,7 @@ Please report vulnerabilities privately through GitHub security advisories.
 LLMWho runs inside applications that may handle sensitive prompts and API
 credentials. Its default policy stores derived metadata only. Authorization
 headers, cookies, API keys, signed query values, and equivalent credentials
-must never be persisted. LLMWho 0.1 does not implement raw prompt or response
+must never be persisted. LLMWho 0.2 does not implement raw prompt or response
 capture, including when its reserved capture option is supplied.
 
 Telemetry failures are designed to be fail-open for the host request. Reports

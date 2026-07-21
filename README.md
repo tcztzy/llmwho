@@ -23,7 +23,7 @@ That call hooks supported HTTP paths in the current process. It does not add a
 proxy, change a base URL, wrap each client, or send synthetic traffic. Existing
 return values, exceptions, and streaming bodies stay under application control.
 
-> **Alpha honesty:** version 0.1 infers identity from response-declared model
+> **Alpha honesty:** version 0.2 infers identity from response-declared model
 > metadata and headers. Those signals can reveal accidental routing changes,
 > but a dishonest provider can forge them. The smoke probe measures endpoint
 > capability and consistency; it is not yet an LLMmap-style behavioral model
@@ -141,7 +141,7 @@ init({ endpoint: "https://gateway.example/internal/ai" });
 | Disable hooks | — | — | `LLMWHO_DISABLED=true` |
 | Content capture | reserved | reserved | `LLMWHO_CAPTURE_CONTENT` reserved |
 
-Raw content capture is deliberately unavailable in 0.1 even if the reserved
+Raw content capture is deliberately unavailable in 0.2 even if the reserved
 option is supplied. This keeps every `ObservationV1` portable and content-free.
 
 ## Explicit active probe
@@ -229,7 +229,7 @@ successful response or the application's original exception.
   well as the model.
 - Passive production workloads change over time and are not a controlled
   benchmark.
-- The 0.1 smoke suite is a compatibility canary, not a broad intelligence score.
+- The 0.2 smoke suite is a compatibility canary, not a broad intelligence score.
 
 Future detectors must be calibrated on held-out models and dates, reject
 open-set unknowns, preserve sample size and uncertainty, and explain their

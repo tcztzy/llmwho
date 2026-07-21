@@ -2,6 +2,7 @@ import { performance } from "node:perf_hooks";
 import { newObservation } from "./observation.js";
 import { NDJSONStore } from "./storage.js";
 import { unhookedFetch } from "./hooks.js";
+import { VERSION } from "./version.js";
 
 function chatUrl(baseUrl) {
   if (!baseUrl || typeof baseUrl !== "string") throw new Error("baseUrl is required");
@@ -83,7 +84,9 @@ export async function probe({
   timeoutMs = 30_000,
   fetchImpl,
 }) {
-  if (suite !== "smoke") throw new Error("only the smoke suite is available in LLMWho 0.1");
+  if (suite !== "smoke") {
+    throw new Error(`only the smoke suite is available in LLMWho ${VERSION}`);
+  }
   if (!model || typeof model !== "string") throw new Error("model is required");
   if (!(timeoutMs > 0)) throw new Error("timeoutMs must be positive");
   const url = chatUrl(baseUrl);
@@ -107,7 +110,10 @@ export async function probe({
         { role: "user", content: probeCase.prompt },
       ],
     });
-    const headers = { "content-type": "application/json", "user-agent": "llmwho/0.1" };
+    const headers = {
+      "content-type": "application/json",
+      "user-agent": `llmwho/${VERSION}`,
+    };
     if (apiKey) headers.authorization = `Bearer ${apiKey}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);

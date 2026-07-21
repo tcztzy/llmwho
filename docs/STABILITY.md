@@ -53,7 +53,7 @@ No overall score is allowed to hide these distinctions.
 
 ## MVP adaptation
 
-LLMWho 0.1 combines two sampling channels:
+LLMWho 0.2 combines two sampling channels:
 
 ### Passive production observations
 
@@ -72,7 +72,7 @@ or identify a model uniquely. Each trial remains visible, including HTTP and
 transport failures.
 
 The dashboard then joins both channels by observation time while keeping their
-source labels. It shows current evidence and history; version 0.1 does not yet
+source labels. It shows current evidence and history; version 0.2 does not yet
 emit automatic statistical drift alerts.
 
 ## Statistical changes before alerting
@@ -97,7 +97,7 @@ correlated measurements. The interval must match the data-generating process.
 
 ## Planned cadence model
 
-The scheduler is intentionally outside the 0.1 middleware, but the data model
+The scheduler is intentionally outside the 0.2 middleware, but the data model
 supports a later policy such as:
 
 | Cadence | Work | Purpose |

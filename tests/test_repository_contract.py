@@ -57,10 +57,10 @@ class RepositoryContractTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         stability = (ROOT / "docs/STABILITY.md").read_text(encoding="utf-8")
         for phrase in (
-            "version 0.1 infers identity from response-declared model",
+            "version 0.2 infers identity from response-declared model",
             "metadata and headers",
             "Active probes cost requests and are never triggered by `init()`",
-            "Raw content capture is deliberately unavailable in 0.1",
+            "Raw content capture is deliberately unavailable in 0.2",
             "Capability similarity does not uniquely identify model weights",
         ):
             self.assertIn(phrase, readme)

@@ -5,7 +5,7 @@ both LLMWho SDKs and the dashboard. It intentionally excludes request headers,
 query strings, raw prompts, raw responses, and arbitrary provider payloads.
 
 The `modality` field can represent non-text systems in later releases, while
-the 0.1 detector and probe suite only support text-generation endpoints.
+the 0.2 detector and probe suite only support text-generation endpoints.
 
 Within schema version 1, readers must tolerate fields being absent when an API
 does not expose them. Producers must not add undeclared fields. A future change
