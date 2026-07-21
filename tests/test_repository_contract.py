@@ -57,17 +57,18 @@ class RepositoryContractTests(unittest.TestCase):
         ):
             self.assertIn(phrase, research)
 
-    def test_public_docs_explain_real_mvp_and_stability_layers(self) -> None:
+    def test_v22_public_docs_explain_real_mvp_and_stability_layers(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         stability = (ROOT / "docs/STABILITY.md").read_text(encoding="utf-8")
         for phrase in (
-            "version 0.2 infers identity from response-declared model",
-            "metadata and headers",
+            "declared `model` field",
+            "Undocumented model response headers are ignored",
             "Active probes cost requests and are never triggered by `init()`",
             "Raw content capture is deliberately unavailable in 0.2",
             "Capability similarity does not uniquely identify model weights",
         ):
             self.assertIn(phrase, readme)
+        self.assertNotIn("metadata and headers", readme)
         for phrase in (
             "AI Stupid Level",
             "Availability",

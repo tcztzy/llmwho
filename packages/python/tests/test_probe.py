@@ -25,27 +25,41 @@ def answer_for(prompt: str) -> str:
 
 class ProbeHandler(BaseHTTPRequestHandler):
     seen_authorization = None
+    declared_model = "server-model"
+    model_headers: dict[str, str] = {}
 
     def do_POST(self) -> None:
         size = int(self.headers["Content-Length"])
         request = json.loads(self.rfile.read(size))
         type(self).seen_authorization = self.headers.get("Authorization")
         prompt = request["messages"][-1]["content"]
-        body = json.dumps(
-            {
-                "model": "server-model",
-                "system_fingerprint": "fp_local",
-                "choices": [{"message": {"content": answer_for(prompt)}}],
-            }
-        ).encode()
+        payload = {
+            "system_fingerprint": "fp_local",
+            "choices": [{"message": {"content": answer_for(prompt)}}],
+        }
+        if type(self).declared_model:
+            payload["model"] = type(self).declared_model
+        body = json.dumps(payload).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        for name, value in type(self).model_headers.items():
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
 
     def log_message(self, format: str, *args: object) -> None:
         return
+
+
+class HeaderOnlyProbeHandler(ProbeHandler):
+    declared_model = None
+    model_headers = {
+        "x-model-id": "header-model-a",
+        "x-model-name": "header-model-b",
+        "x-model": "header-model-c",
+        "openai-model": "header-model-d",
+    }
 
 
 class ProbeTests(unittest.TestCase):
@@ -72,6 +86,27 @@ class ProbeTests(unittest.TestCase):
                 self.assertNotIn("probe-secret", persisted)
                 self.assertNotIn("Reply with exactly", persisted)
                 self.assertEqual(ProbeHandler.seen_authorization, "Bearer probe-secret")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+    def test_v22_undocumented_model_headers_are_ignored(self) -> None:
+        server = ThreadingHTTPServer(("127.0.0.1", 0), HeaderOnlyProbeHandler)
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with TemporaryDirectory() as directory:
+                path = Path(directory) / "events.ndjson"
+                report = probe(
+                    base_url=f"http://127.0.0.1:{server.server_port}",
+                    model="client-model",
+                    storage_path=str(path),
+                )
+                self.assertEqual(report["identity"]["statuses"], {"unknown": 4})
+                self.assertEqual(report["identity"]["observed_models"], {})
+                events = NDJSONStore(path).read()
+                self.assertTrue(all(event["identity"]["evidence"] == [] for event in events))
         finally:
             server.shutdown()
             server.server_close()

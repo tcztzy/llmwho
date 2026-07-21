@@ -2,23 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Mapping, Optional
-
-
-MODEL_HEADERS = (
-    "x-model-id",
-    "x-model-name",
-    "x-model",
-    "openai-model",
-)
+from typing import Optional
 
 
 def infer_identity(
     claimed_model: Optional[str] = None,
     declared_model: Optional[str] = None,
-    response_headers: Optional[Mapping[str, str]] = None,
 ) -> dict:
-    """Build an evidence ledger; never infer identity from style alone."""
+    """Build an evidence ledger from the response-declared model."""
 
     evidence = []
     observed = declared_model or None
@@ -33,22 +24,6 @@ def infer_identity(
                 "weight": weight,
             }
         )
-    if not observed and response_headers:
-        lowered = {str(key).lower(): str(value) for key, value in response_headers.items()}
-        for header in MODEL_HEADERS:
-            if lowered.get(header):
-                observed = lowered[header]
-                weight = 0.85
-                evidence.append(
-                    {
-                        "kind": "response_model_header",
-                        "source": f"response.headers.{header}",
-                        "value": observed,
-                        "weight": weight,
-                    }
-                )
-                break
-
     if observed and claimed_model:
         status = "matched" if observed == claimed_model else "mismatch"
         confidence = weight

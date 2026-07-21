@@ -174,16 +174,6 @@ function responseMetadata(payload, bytes, status, provider) {
   return [result, declaredModel];
 }
 
-function responseHeaders(response) {
-  const result = {};
-  try {
-    response.headers.forEach((value, key) => { result[key] = value; });
-  } catch {
-    // Missing headers simply reduce identity evidence.
-  }
-  return result;
-}
-
 function observe(handle, fields) {
   try {
     handle.store.append(newObservation(fields));
@@ -213,7 +203,6 @@ function recordResponse(handle, context, response) {
       : "http_error",
     claimedModel: context.claimedModel,
     provider: context.provider,
-    responseHeaders: responseHeaders(response),
     request: context.request,
     redactions: context.redactions,
   };

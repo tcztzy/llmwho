@@ -58,7 +58,7 @@ export interface ProbeReport {
   cases: Array<Record<string, unknown>>;
 }
 export function probe(options: ProbeOptions): Promise<ProbeReport>;
-export function inferIdentity(claimedModel?: string, declaredModel?: string, responseHeaders?: Record<string, string>): ObservationV1["identity"];
+export function inferIdentity(claimedModel?: string, declaredModel?: string): ObservationV1["identity"];
 export function newObservation(options: Record<string, unknown>): ObservationV1;
 export function validateObservation(event: ObservationV1): void;
 export class NDJSONStore {

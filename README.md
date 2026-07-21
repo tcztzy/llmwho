@@ -23,8 +23,9 @@ That call hooks supported HTTP paths in the current process. It does not add a
 proxy, change a base URL, wrap each client, or send synthetic traffic. Existing
 return values, exceptions, and streaming bodies stay under application control.
 
-> **Alpha honesty:** version 0.2 infers identity from response-declared model
-> metadata and headers. Those signals can reveal accidental routing changes,
+> **Alpha honesty:** version 0.2 infers identity from the response body's
+> declared `model` field. Undocumented model response headers are ignored.
+> This provider-controlled signal can reveal accidental routing changes,
 > but a dishonest provider can forge them. The smoke probe measures endpoint
 > capability and consistency; it is not yet an LLMmap-style behavioral model
 > classifier. Identity conclusions remain evidence-backed and probabilistic;

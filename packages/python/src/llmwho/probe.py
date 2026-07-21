@@ -157,14 +157,12 @@ def probe(
         status_code = None
         outcome = "network_error"
         response_payload = None
-        response_headers: dict[str, str] = {}
         output_size = 0
         try:
             with urlopen(Request(url, data=body, headers=headers, method="POST"), timeout=timeout) as response:
                 status_code = response.status
                 raw = response.read()
                 output_size = len(raw)
-                response_headers = dict(response.headers.items())
                 try:
                     parsed = json.loads(raw)
                     response_payload = parsed if isinstance(parsed, dict) else None
@@ -174,7 +172,6 @@ def probe(
         except HTTPError as error:
             status_code = error.code
             outcome = "http_error"
-            response_headers = dict(error.headers.items()) if error.headers else {}
         except (TimeoutError, socket.timeout):
             outcome = "timeout"
         except URLError as error:
@@ -199,7 +196,6 @@ def probe(
             source="probe",
             claimed_model=model,
             declared_model=declared,
-            response_headers=response_headers,
             request={
                 "operation": "chat.completions",
                 "claimed_model": model,

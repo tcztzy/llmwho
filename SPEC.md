@@ -58,6 +58,7 @@ V18: published npm/PyPI artifacts version match git tag & expose §I interfaces
 V19: direct Anthropic Messages observations → same normalized Python/JS fields; when both counts exist `total_tokens=input_tokens+output_tokens`; malformed/absent metadata omitted
 V20: Claude Code/Codex hook adapter → exit 0 & protocol-neutral stdout despite malformed input/telemetry failure; ⊥ network, transcript read, prompt/response/tool content, session/turn IDs persistence
 V21: hook state → hashed session filename + safe model/start time/input byte count only; Python/JS turn event parity for provider, operation, model, duration, outcome, input/output bytes, privacy
+V22: default identity inference → response body `model` only; undocumented model headers → no evidence
 
 ## §T TASKS
 id|status|task|cites
@@ -76,3 +77,4 @@ T11|x|implement Claude Code/Codex project-hook CLI adapters, safe turn state, co
 ## §B BUGS
 id|date|cause|fix
 B1|2026-07-20|README contract tests matched formatting and obsolete phrases|test semantic fragments; no new invariant
+B2|2026-07-21|doc contract required unsupported model-header evidence|V22

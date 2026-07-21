@@ -28,7 +28,6 @@ def new_observation(
     provider: Optional[str] = None,
     claimed_model: Optional[str] = None,
     declared_model: Optional[str] = None,
-    response_headers: Optional[Mapping[str, str]] = None,
     request: Optional[Mapping[str, Any]] = None,
     response: Optional[Mapping[str, Any]] = None,
     probe: Optional[Mapping[str, Any]] = None,
@@ -43,7 +42,7 @@ def new_observation(
         "sdk": {"name": "llmwho-python", "version": __version__},
         "endpoint": endpoint_from_url(url),
         "transport": {"outcome": outcome, "duration_ms": max(0.0, duration_ms)},
-        "identity": infer_identity(claimed_model, declared_model, response_headers),
+        "identity": infer_identity(claimed_model, declared_model),
         "privacy": {"content_captured": False, "redactions": max(0, redactions)},
     }
     if provider:
