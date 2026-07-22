@@ -280,6 +280,11 @@ class RepositoryContractTests(unittest.TestCase):
             release,
         )
         self.assertNotIn("Select at least one registry for recovery", release)
+        self.assertIn(
+            "- name: Validate npm publish\n"
+            "        if: github.event_name == 'push' || inputs.publish_npm",
+            release,
+        )
 
 
 if __name__ == "__main__":
