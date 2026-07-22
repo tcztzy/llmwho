@@ -20,6 +20,7 @@ from .anthropic import (
 )
 from .observation import new_observation
 from .privacy import SENSITIVE_HEADERS
+from .remote import RemoteStore
 from .storage import JSONLStore
 
 
@@ -177,7 +178,7 @@ def _exception_outcome(error: Exception) -> str:
 
 @dataclass
 class HookHandle:
-    store: JSONLStore
+    store: JSONLStore | RemoteStore
     endpoint: EndpointMatcher = None
     capture_content: bool = False
     _patches: list[tuple[Any, str, Any, Any]] = field(default_factory=list)
@@ -205,6 +206,7 @@ class HookHandle:
                     setattr(owner, attribute, original)
             self._patches.clear()
             self.active = False
+            self.store.close()
             if _ACTIVE_HANDLE is self:
                 _ACTIVE_HANDLE = None
 
@@ -378,6 +380,9 @@ def init(
     storage_path: os.PathLike[str] | str | None = None,
     capture_content: bool = False,
     endpoint: EndpointMatcher = None,
+    collector_url: str | None = None,
+    collector_token: str | None = None,
+    collector_protocol: str | None = None,
 ) -> HookHandle:
     """Install one process-wide passive hook layer and return its handle.
 
@@ -391,11 +396,27 @@ def init(
         if _ACTIVE_HANDLE is not None and _ACTIVE_HANDLE.active:
             return _ACTIVE_HANDLE
         configured_path = storage_path or os.environ.get("LLMWHO_STORAGE")
+        active = _environment_enabled()
+        configured_collector = collector_url or os.environ.get("LLMWHO_COLLECTOR_URL")
+        if active and configured_collector:
+            token = (
+                collector_token
+                if collector_token is not None
+                else os.environ.get("LLMWHO_COLLECTOR_TOKEN")
+            )
+            store: JSONLStore | RemoteStore = RemoteStore(
+                configured_collector,
+                token=token,
+                protocol=collector_protocol
+                or os.environ.get("LLMWHO_COLLECTOR_PROTOCOL", "native"),
+            )
+        else:
+            store = JSONLStore(configured_path)
         handle = HookHandle(
-            store=JSONLStore(configured_path),
+            store=store,
             endpoint=endpoint,
             capture_content=False,
-            active=_environment_enabled(),
+            active=active,
         )
         _ACTIVE_HANDLE = handle
         if not handle.active:

@@ -5,12 +5,14 @@ from .identity import infer_identity
 from .hooks import HookHandle, init
 from .observation import new_observation, validate_observation
 from .probe import probe
+from .remote import RemoteStore
 from .storage import JSONLStore, SQLiteStore
 from .summary import quantile, summarize
 from .version import __version__
 
 __all__ = [
     "JSONLStore",
+    "RemoteStore",
     "SQLiteStore",
     "HookHandle",
     "__version__",

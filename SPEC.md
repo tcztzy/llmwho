@@ -30,11 +30,11 @@
 ## §I INTERFACES
 - py: `import llmwho; handle = llmwho.init()` → idempotent global hook install
 - py: `llmwho.init(storage_path=..., capture_content=False, endpoint=...)`
-- py: `llmwho.init(..., collector_url=..., collector_token=...)`; env fallback `LLMWHO_COLLECTOR_URL` / `LLMWHO_COLLECTOR_TOKEN`
+- py: `llmwho.init(..., collector_url=..., collector_token=..., collector_protocol="native"|"otlp")`; env fallback `LLMWHO_COLLECTOR_*`
 - py: `handle.shutdown()` → restore patched callables owned by handle
 - py: `llmwho.probe(base_url=..., api_key=..., model=..., suite="smoke")` → `ProbeReport`
 - js: `import { init } from "llmwho"; const handle = init()` → idempotent `globalThis.fetch` hook
-- js: `init({collectorUrl, collectorToken, ...})`; env fallback `LLMWHO_COLLECTOR_URL` / `LLMWHO_COLLECTOR_TOKEN`
+- js: `init({collectorUrl, collectorToken, collectorProtocol: "native"|"otlp", ...})`; env fallback `LLMWHO_COLLECTOR_*`
 - js: `handle.shutdown()` → restore owned fetch hook
 - js: `probe({ baseUrl, apiKey, model, suite: "smoke" })` → `Promise<ProbeReport>`
 - py: `llmwho.science.output_affinity_matrix(corpora, ngram_size=3, model_weight=0.8)` → `AnalysisReport`
@@ -54,7 +54,7 @@
 - dashboard: local `GET /`, `GET /api/summary`, `GET /api/events`
 - collector: `GET /api/health`, `GET /api/summary`, `GET /api/events`; `POST /api/v1/observations`; OTLP/HTTP JSON `POST /v1/logs`
 - store: Python `SQLiteStore(path)` + Python/Node `RemoteStore(url, token=...)`; `append`, `read`, `close`
-- env: `LLMWHO_STORAGE`, `LLMWHO_CAPTURE_CONTENT`, `LLMWHO_DISABLED`, `LLMWHO_COLLECTOR_URL`, `LLMWHO_COLLECTOR_TOKEN`
+- env: `LLMWHO_STORAGE`, `LLMWHO_CAPTURE_CONTENT`, `LLMWHO_DISABLED`, `LLMWHO_COLLECTOR_URL`, `LLMWHO_COLLECTOR_TOKEN`, `LLMWHO_COLLECTOR_PROTOCOL`
 
 ## §V INVARIANTS
 V1: ∀ process, repeated `init()` → one hook layer & shared handle; shutdown restores only LLMWho-owned patch
@@ -122,7 +122,7 @@ T17|x|skip registry publish dry-run when recovery only rebuilds already-publishe
 T18|x|pass explicit repository context to isolated GitHub Release job without source checkout|V32,V33
 T19|x|implement SQLite shared repository, schema, idempotence, JSONL import/export, tests|V2,V3,V7,V34,V35,V36,I.store
 T20|x|implement authenticated Collector native + OTLP ingest, shared dashboard/query API, CLI, tests|V2,V3,V9,V13,V14,V34,V36,V37,V38,V41,I.collector,I.cli
-T21|.|implement bounded fail-open Python/Node remote sinks, init/env config, shutdown flush, parity tests|V1,V2,V3,V4,V5,V7,V13,V39,V40,I.py,I.js,I.store
+T21|~|implement bounded fail-open Python/Node remote sinks, init/env config, shutdown flush, parity tests|V1,V2,V3,V4,V5,V7,V13,V39,V40,I.py,I.js,I.store
 T22|.|ship all-in-one container, live Collector docs/tutorial/security guidance, contract tests|V2,V3,V9,V16,V37,V41,V42
 T23|.|bump v0.4 versions; run Python/Node lint, type, test, build, install, repository gates|V17,V18,V32,V33,V42
 
@@ -136,3 +136,4 @@ B5|2026-07-22|npm 12 parsed bare `dist/*.tgz` as GitHub shorthand after PyPI pub
 B6|2026-07-22|GitHub Actions skip propagation suppressed GitHub Release after intentionally skipped PyPI recovery job|V33
 B7|2026-07-22|npm 12 publish dry-run rejects an already-published version during release-only recovery|V33
 B8|2026-07-22|isolated GitHub Release job lacked `.git` and explicit `gh --repo` context|V33
+B9|2026-07-22|OTLP test searched unescaped event JSON inside an outer JSON serialization|decode `body.stringValue` before semantic assertions; no new invariant

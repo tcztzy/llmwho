@@ -27,9 +27,12 @@ export interface InitOptions {
   storagePath?: string;
   captureContent?: boolean;
   endpoint?: string | ((url: string) => boolean);
+  collectorUrl?: string;
+  collectorToken?: string;
+  collectorProtocol?: "native" | "otlp";
 }
 export class HookHandle {
-  readonly store: JSONLStore;
+  readonly store: JSONLStore | RemoteStore;
   readonly endpoint?: InitOptions["endpoint"];
   readonly captureContent: false;
   active: boolean;
@@ -146,6 +149,33 @@ export class JSONLStore {
   path: string;
   append(event: ObservationV1): void;
   read(limit?: number): ObservationV1[];
+  close(): void;
 }
+export interface RemoteStoreOptions {
+  token?: string;
+  protocol?: "native" | "otlp";
+  maxQueue?: number;
+  batchSize?: number;
+  flushIntervalMs?: number;
+  requestTimeoutMs?: number;
+  fetchImpl?: typeof fetch;
+}
+export class RemoteStore {
+  constructor(url: string, options?: RemoteStoreOptions);
+  readonly url: string;
+  readonly protocol: "native" | "otlp";
+  readonly endpoint: string;
+  readonly maxQueue: number;
+  readonly batchSize: number;
+  closed: boolean;
+  dropped: number;
+  deliveryFailures: number;
+  delivered: number;
+  append(event: ObservationV1): boolean;
+  flush(): Promise<void>;
+  read(limit?: number): Promise<ObservationV1[]>;
+  close(options?: { timeoutMs?: number }): Promise<boolean>;
+}
+export function otlpLogsPayload(events: ObservationV1[]): Record<string, unknown>;
 export function quantile(values: number[], probability: number): number | null;
 export function summarize(events: ObservationV1[]): Record<string, unknown>;

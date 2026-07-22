@@ -6,7 +6,7 @@ import {
   isAnthropicMessagesUrl,
 } from "./anthropic.js";
 import { newObservation } from "./observation.js";
-import { JSONLStore } from "./storage.js";
+import { JSONLStore, RemoteStore } from "./storage.js";
 
 const KNOWN_LLM_PATH = /(?:\/chat\/completions|\/completions|\/responses|\/messages|\/api\/chat|\/api\/generate|:generatecontent|:streamgeneratecontent)(?:\/|$)/i;
 const SECRET_QUERY_KEYS = new Set([
@@ -251,19 +251,33 @@ export class HookHandle {
     if (globalThis.fetch === this.wrapper) globalThis.fetch = this.originalFetch;
     this.active = false;
     if (activeHandle === this) activeHandle = undefined;
+    try {
+      const closing = this.store.close?.();
+      closing?.catch?.(() => {});
+    } catch {
+      // Sink shutdown must not affect the host application.
+    }
   }
 }
 
 export function init(options = {}) {
   if (activeHandle?.active) return activeHandle;
-  const store = new JSONLStore(options.storagePath ?? process.env.LLMWHO_STORAGE);
   const originalFetch = globalThis.fetch;
+  const isActive = enabled() && typeof originalFetch === "function";
+  const collectorUrl = options.collectorUrl ?? process.env.LLMWHO_COLLECTOR_URL;
+  const store = isActive && collectorUrl
+    ? new RemoteStore(collectorUrl, {
+      token: options.collectorToken ?? process.env.LLMWHO_COLLECTOR_TOKEN,
+      protocol: options.collectorProtocol ?? process.env.LLMWHO_COLLECTOR_PROTOCOL ?? "native",
+      fetchImpl: originalFetch,
+    })
+    : new JSONLStore(options.storagePath ?? process.env.LLMWHO_STORAGE);
   const handle = new HookHandle({
     store,
     endpoint: options.endpoint,
     originalFetch,
     wrapper: undefined,
-    active: enabled() && typeof originalFetch === "function",
+    active: isActive,
   });
   activeHandle = handle;
   if (!handle.active) return handle;
