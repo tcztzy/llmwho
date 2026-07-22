@@ -275,6 +275,11 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("inputs.publish_npm", release)
         self.assertIn("verify-registries:", release)
         self.assertIn("needs: verify-registries", release)
+        self.assertIn(
+            "if: always() && needs.verify-registries.result == 'success'",
+            release,
+        )
+        self.assertNotIn("Select at least one registry for recovery", release)
 
 
 if __name__ == "__main__":
