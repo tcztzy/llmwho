@@ -142,3 +142,4 @@ B10|2026-07-22|Collector doc contract bound one paraphrase despite equivalent at
 B11|2026-07-22|container verifier overmounted owned `/data` with root-owned tmpfs, blocking UID 10001|verify V42 with image-initialized anonymous volume; no new invariant
 B12|2026-07-22|runtime validator checked core fields but not full shared-schema keys/types at Collector boundary|enforce complete Python/Node `ObservationV1` shape and add V36 parity tests; no new invariant
 B13|2026-07-22|SQLite creation inherited process umask and could expose operational metadata to group/others|V43
+B14|2026-07-22|local release verifier left `uv run` then assumed a system `python` executable|run repository contracts inside explicit uv environment; no new invariant
