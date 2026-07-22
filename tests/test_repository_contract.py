@@ -285,6 +285,7 @@ class RepositoryContractTests(unittest.TestCase):
             "        if: github.event_name == 'push' || inputs.publish_npm",
             release,
         )
+        self.assertEqual(release.count('--repo "$GITHUB_REPOSITORY"'), 3)
 
 
 if __name__ == "__main__":
