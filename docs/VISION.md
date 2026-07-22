@@ -98,9 +98,11 @@ API keys, signed query parameters, cookies, and equivalent credentials are
 never recorded. Derived features should be calculated in-process before raw
 content is discarded. Telemetry failures must never break the host request.
 
-The MVP is local-first. Its dashboard binds to loopback and reads a portable
-JSONL event stream. Teams can later provide remote sinks without forcing a
-hosted service on individual developers.
+The zero-configuration path remains local-first and writes a portable JSONL
+event stream. Version 0.4 adds an optional self-hosted Collector that owns a
+shared SQLite data layer and live dashboard. It binds loopback by default;
+remote deployment is explicit, authenticated, and never required for an
+individual developer.
 
 ## Scope
 
@@ -122,3 +124,5 @@ new telemetry foundation.
 - Published npm and PyPI packages expose matching concepts and event fields.
 - Python and Node science calls execute the same versioned Python plugins and
   report plugin identity, evidence, limitations, and protocol version.
+- An administrator can deploy one Collector process, point both SDKs at it,
+  and observe the same content-free events through its live dashboard.

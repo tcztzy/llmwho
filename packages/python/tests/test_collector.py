@@ -177,6 +177,11 @@ class CollectorTests(unittest.TestCase):
             try:
                 with collector.request("/") as response:
                     self.assertEqual(response.status, 200)
+                    html = response.read().decode()
+                self.assertIn("Collector bearer token", html)
+                self.assertIn("Authorization", html)
+                self.assertNotIn("localStorage", html)
+                self.assertNotIn("sessionStorage", html)
                 with collector.request("/api/health") as response:
                     self.assertEqual(json.load(response)["status"], "ok")
                 with self.assertRaises(HTTPError) as unauthorized:

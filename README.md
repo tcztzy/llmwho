@@ -3,9 +3,9 @@
 **Know who is probably behind the endpoint—and whether that endpoint is still
 behaving like the service you chose.**
 
-LLMWho is a local-first middleware for passive LLM API observation, explicit
-active probes, and layered stability monitoring. Its main integration is one
-call:
+LLMWho is a local-first middleware and self-hosted Collector for passive LLM
+API observation, explicit active probes, and layered stability monitoring. Its
+main application integration is one call:
 
 ```python
 import llmwho
@@ -23,7 +23,7 @@ That call hooks supported HTTP paths in the current process. It does not add a
 proxy, change a base URL, wrap each client, or send synthetic traffic. Existing
 return values, exceptions, and streaming bodies stay under application control.
 
-> **Alpha honesty:** version 0.3 infers identity from the response body's
+> **Alpha honesty:** version 0.4 infers identity from the response body's
 > declared `model` field. Undocumented model response headers are ignored.
 > This provider-controlled signal can reveal accidental routing changes,
 > but a dishonest provider can forge them. The smoke probe measures endpoint
@@ -161,12 +161,41 @@ init({ endpoint: "https://gateway.example/internal/ai" });
 | Purpose | Python | Node | Environment |
 |---|---|---|---|
 | Event file | `storage_path="…"` | `storagePath: "…"` | `LLMWHO_STORAGE` |
+| Collector URL | `collector_url="…"` | `collectorUrl: "…"` | `LLMWHO_COLLECTOR_URL` |
+| Collector token | `collector_token="…"` | `collectorToken: "…"` | `LLMWHO_COLLECTOR_TOKEN` |
+| Wire protocol | `collector_protocol="native"` | `collectorProtocol: "native"` | `LLMWHO_COLLECTOR_PROTOCOL` |
 | Explicit route | `endpoint=prefix_or_callable` | `endpoint: prefixOrFunction` | — |
 | Disable hooks | — | — | `LLMWHO_DISABLED=true` |
 | Content capture | reserved | reserved | `LLMWHO_CAPTURE_CONTENT` reserved |
 
-Raw content capture is deliberately unavailable in 0.3 even if the reserved
+Raw content capture is deliberately unavailable in 0.4 even if the reserved
 option is supplied. This keeps every `ObservationV1` portable and content-free.
+
+## Self-hosted Collector
+
+Run one process for central ingestion, SQLite WAL persistence, queries, and the
+live dashboard:
+
+```bash
+llmwho collector
+```
+
+Then point any Python or Node application at it:
+
+```bash
+export LLMWHO_COLLECTOR_URL=http://127.0.0.1:7734
+```
+
+When configured, SDKs validate and enqueue observations without waiting for
+Collector latency. Both native batches and marked OTLP/HTTP JSON logs are
+supported. The queue is bounded and delivery remains fail-open; without a
+Collector URL, the SDK keeps using local JSONL.
+
+Non-loopback binds require `LLMWHO_COLLECTOR_TOKEN`; data APIs require the same
+value as a Bearer token. The dashboard asks for it in protected deployments and
+keeps it in page memory. Use TLS before sending that credential across a
+network. For Docker Compose, API details, OTLP mapping, JSONL import/export, and
+the data ownership model, see [Self-hosted Collector](docs/COLLECTOR.md).
 
 ## Explicit active probe
 
@@ -307,7 +336,7 @@ successful response or the application's original exception.
   well as the model.
 - Passive production workloads change over time and are not a controlled
   benchmark.
-- The 0.3 smoke suite is a compatibility canary, not a broad intelligence score.
+- The 0.4 smoke suite is a compatibility canary, not a broad intelligence score.
 - Output-affinity depends on its prompt set and pooled reference models; it
   measures local writing style, not model provenance.
 

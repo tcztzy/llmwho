@@ -30,9 +30,12 @@ class RepositoryContractTests(unittest.TestCase):
             "docs/AGENT_HOOKS.md",
             "docs/OUTPUT_AFFINITY.md",
             "docs/SCIENCE_RUNTIME.md",
+            "docs/COLLECTOR.md",
             "examples/hooks/claude-code.settings.json",
             "examples/hooks/codex.hooks.json",
             "SECURITY.md",
+            "Dockerfile",
+            "compose.yaml",
         ):
             self.assertTrue((ROOT / relative).is_file(), relative)
 
@@ -77,7 +80,7 @@ class RepositoryContractTests(unittest.TestCase):
             "declared `model` field",
             "Undocumented model response headers are ignored",
             "Active probes cost requests and are never triggered by `init()`",
-            "Raw content capture is deliberately unavailable in 0.3",
+            "Raw content capture is deliberately unavailable in 0.4",
             "Capability similarity does not uniquely identify model weights",
         ):
             self.assertIn(phrase, readme)
@@ -174,6 +177,42 @@ class RepositoryContractTests(unittest.TestCase):
             self.assertIn(phrase, runtime)
         self.assertFalse((ROOT / "packages/node/src/output-affinity.js").exists())
         self.assertFalse((ROOT / "packages/python/src/llmwho/output_affinity.py").exists())
+
+    def test_v42_collector_is_deployable_authenticated_and_shared(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        guide = (ROOT / "docs/COLLECTOR.md").read_text(encoding="utf-8")
+        dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+        compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+        dashboard = (
+            ROOT / "packages/python/src/llmwho/dashboard.html"
+        ).read_text(encoding="utf-8")
+
+        for phrase in (
+            "llmwho collector",
+            "LLMWHO_COLLECTOR_URL",
+            "LLMWHO_COLLECTOR_TOKEN",
+            "Self-hosted Collector",
+        ):
+            self.assertIn(phrase, readme)
+        for phrase in (
+            "Collector is its owner",
+            "JSONL is interchange",
+            "OTLP/HTTP JSON",
+            "TLS reverse proxy",
+            "A batch containing",
+            "is rejected without persisting any member",
+        ):
+            self.assertIn(phrase, guide)
+        self.assertIn("USER 10001:10001", dockerfile)
+        self.assertIn('ENTRYPOINT ["llmwho"]', dockerfile)
+        self.assertIn('"collector", "--host", "0.0.0.0"', dockerfile)
+        self.assertIn("LLMWHO_COLLECTOR_TOKEN:?", compose)
+        self.assertIn('"127.0.0.1:7734:7734"', compose)
+        self.assertIn("read_only: true", compose)
+        self.assertIn("Collector bearer token", dashboard)
+        self.assertIn("setInterval(refresh,5000)", dashboard)
+        self.assertNotIn("localStorage", dashboard)
+        self.assertNotIn("sessionStorage", dashboard)
 
     def test_python_style_gate_bans_deferred_annotations(self) -> None:
         project = (ROOT / "packages/python/pyproject.toml").read_text(encoding="utf-8")

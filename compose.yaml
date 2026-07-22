@@ -1,0 +1,17 @@
+services:
+  collector:
+    build:
+      context: .
+    environment:
+      LLMWHO_COLLECTOR_TOKEN: ${LLMWHO_COLLECTOR_TOKEN:?set LLMWHO_COLLECTOR_TOKEN}
+    ports:
+      - "127.0.0.1:7734:7734"
+    volumes:
+      - llmwho-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+
+volumes:
+  llmwho-data:

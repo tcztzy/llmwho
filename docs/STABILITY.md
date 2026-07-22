@@ -53,7 +53,7 @@ No overall score is allowed to hide these distinctions.
 
 ## MVP adaptation
 
-LLMWho 0.3 combines two sampling channels:
+LLMWho 0.4 combines two sampling channels:
 
 ### Passive production observations
 
@@ -72,7 +72,7 @@ or identify a model uniquely. Each trial remains visible, including HTTP and
 transport failures.
 
 The dashboard then joins both channels by observation time while keeping their
-source labels. It shows current evidence and history; version 0.3 does not yet
+source labels. It shows current evidence and history; version 0.4 does not yet
 emit automatic statistical drift alerts.
 
 ## Statistical changes before alerting

@@ -33,6 +33,21 @@ recognized LLM routes. It writes content-free observations to
 streaming responses are not consumed, and `handle.shutdown()` safely restores
 only LLMWho-owned patches.
 
+Send the same observations to a self-hosted Collector without changing request
+sites:
+
+```python
+handle = llmwho.init(
+    collector_url="http://127.0.0.1:7734",
+    collector_token="…",
+)
+```
+
+The remote queue is bounded, non-blocking, and fail-open. Native and OTLP modes
+are available; no Collector URL keeps the local JSONL default. Run the service
+with `llmwho collector`; deployment and security details are in the
+[Collector guide](https://github.com/tcztzy/llmwho/blob/main/docs/COLLECTOR.md).
+
 The CLI also accepts content-free Claude Code and Codex lifecycle events:
 `llmwho hook claude-code|codex --event EVENT`. Project configuration and
 privacy details are in the
@@ -70,7 +85,7 @@ llmwho dashboard
 ```
 
 Identity results are probabilistic evidence, not cryptographic attestation.
-Version 0.3 uses the response body's declared `model` field and ignores
+Version 0.4 uses the response body's declared `model` field and ignores
 undocumented model response headers; its smoke suite measures capability
 and does not uniquely identify arbitrary model weights. Raw prompts, responses,
 headers, query strings, and credentials are never stored.

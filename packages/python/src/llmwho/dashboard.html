@@ -15,6 +15,11 @@
     .mark { width:42px; height:42px; display:grid; place-items:center; border:1px solid #38506b; border-radius:12px; background:linear-gradient(145deg,#172332,#0d121a); color:var(--green); font-weight:800; letter-spacing:-2px; box-shadow:0 10px 32px #0008; }
     h1 { margin:0; font-size:22px; letter-spacing:-.4px; } .subtitle { color:var(--muted); margin-top:2px; }
     .live { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; }
+    .auth { display:flex; align-items:center; gap:8px; }
+    .auth[hidden] { display:none; }
+    .auth input { width:210px; color:var(--text); background:#0b1017; border:1px solid var(--line); border-radius:8px; padding:8px 10px; outline:none; }
+    .auth input:focus { border-color:var(--blue); }
+    .auth button { color:#07110d; background:var(--green); border:0; border-radius:8px; padding:8px 12px; font-weight:700; cursor:pointer; }
     .dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 14px var(--green); }
     .cards { display:grid; grid-template-columns:repeat(5,minmax(160px,1fr)); gap:12px; margin-bottom:12px; }
     .card,.panel { background:linear-gradient(155deg,var(--panel2),var(--panel)); border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 40px #0003; }
@@ -55,7 +60,7 @@
   <main class="shell">
     <header>
       <div class="brand"><div class="mark">W?</div><div><h1>LLMWho</h1><div class="subtitle">Endpoint identity &amp; stability</div></div></div>
-      <div class="live"><span class="dot"></span><span id="freshness">Loading local observations…</span></div>
+      <div><div class="live"><span class="dot"></span><span id="freshness">Loading observations…</span></div><div class="auth" id="auth" hidden><input id="token" type="password" autocomplete="off" placeholder="Collector bearer token"><button id="connect" type="button">Connect</button></div></div>
     </header>
     <section class="cards">
       <article class="card" style="--accent:var(--green)"><div class="eyebrow">Availability</div><div class="value" id="availability">—</div><div class="note" id="availability-note">successful requests</div></article>
@@ -75,7 +80,7 @@
       <article class="panel"><div class="panel-head"><h2>Capability &amp; behavior</h2><span class="badge">separate from uptime</span></div><div id="capability-bars"></div><div class="metrics"><div class="metric"><span class="eyebrow">Probe samples</span><strong id="probe-count">0</strong></div><div class="metric"><span class="eyebrow">Responses</span><strong id="response-count">0</strong></div><div class="metric"><span class="eyebrow">Streams</span><strong id="stream-count">0</strong></div></div></article>
       <article class="panel wide"><div class="panel-head"><h2>Observation timeline</h2><span class="badge" id="event-count">0 events</span></div><table><thead><tr><th>Time</th><th>Source</th><th>Endpoint</th><th>Requested</th><th>Observed</th><th>Outcome</th><th>Latency</th><th>Identity</th></tr></thead><tbody id="events"></tbody></table></article>
     </section>
-    <footer>Local-only dashboard · raw prompts, responses, and credentials are not stored</footer>
+    <footer>Self-hosted evidence dashboard · raw prompts, responses, and credentials are not stored</footer>
   </main>
   <script>
     const $ = id => document.getElementById(id);
@@ -83,6 +88,9 @@
     const ms = value => value == null ? "—" : `${Math.round(value)} ms`;
     const safe = value => String(value ?? "—").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
     const tone = value => value === "success" || value === "matched" ? "ok" : value === "unknown" ? "neutral" : "bad";
+    let collectorToken = "";
+    const api = path => fetch(path,{cache:"no-store",headers:collectorToken?{Authorization:`Bearer ${collectorToken}`}:{}});
+    function requestToken() { $("auth").hidden=false; $("freshness").textContent="Bearer token required"; $("freshness").previousElementSibling.style.background="var(--amber)"; }
     function bars(target, values, colors={}) {
       const entries = Object.entries(values || {}); const max = Math.max(1,...entries.map(([,v])=>v));
       $(target).innerHTML = entries.length ? entries.map(([key,value]) => `<div class="bar-row"><div class="bar-label" title="${safe(key)}">${safe(key)}</div><div class="bar-track"><div class="bar-fill" style="width:${value/max*100}%;--bar:${colors[key]||"var(--blue)"}"></div></div><div class="bar-count">${value}</div></div>`).join("") : '<div class="empty">No samples yet</div>';
@@ -95,9 +103,11 @@
     }
     async function refresh() {
       try {
-        const [summaryResponse,eventResponse]=await Promise.all([fetch("/api/summary",{cache:"no-store"}),fetch("/api/events?limit=500",{cache:"no-store"})]);
+        const [summaryResponse,eventResponse]=await Promise.all([api("/api/summary"),api("/api/events?limit=500")]);
+        if(summaryResponse.status===401||eventResponse.status===401) { requestToken(); return; }
         if(!summaryResponse.ok||!eventResponse.ok) throw new Error("API unavailable");
         const summary=await summaryResponse.json(), events=await eventResponse.json(); const statuses=summary.identity.statuses||{}; const decided=(statuses.matched||0)+(statuses.mismatch||0);
+        $("auth").hidden=true; $("freshness").previousElementSibling.style.background="var(--green)";
         $("availability").textContent=pct(summary.availability.success_rate); $("availability-note").textContent=`${summary.availability.outcomes.success||0} of ${summary.events} successful`;
         $("p95").textContent=ms(summary.transport.latency_ms.p95); $("p50").textContent=ms(summary.transport.latency_ms.p50); $("p95-detail").textContent=ms(summary.transport.latency_ms.p95); $("p99").textContent=ms(summary.transport.latency_ms.p99);
         $("behavior").textContent=summary.behavior.output_bytes_p50==null?"—":`${Math.round(summary.behavior.output_bytes_p50)} B`;
@@ -109,10 +119,12 @@
         $("model-count").textContent=Object.keys(summary.identity.observed_models||{}).length; $("unknown-count").textContent=statuses.unknown||0; $("mismatch-count").textContent=statuses.mismatch||0; $("probe-count").textContent=summary.capability.probe_count; $("response-count").textContent=summary.behavior.observed_responses; $("stream-count").textContent=summary.behavior.stream_requests;
         chart(events); $("event-count").textContent=`${summary.events} events`;
         $("events").innerHTML=events.slice(-100).reverse().map(e=>`<tr><td>${safe(new Date(e.timestamp).toLocaleString())}</td><td>${safe(e.source)}</td><td title="${safe(e.endpoint.host+e.endpoint.path)}">${safe(e.endpoint.host+e.endpoint.path)}</td><td>${safe(e.request?.claimed_model)}</td><td>${safe(e.identity?.observed_model)}</td><td><span class="pill ${tone(e.transport.outcome)}">${safe(e.transport.outcome)}</span></td><td>${Math.round(e.transport.duration_ms)} ms</td><td><span class="pill ${tone(e.identity.status)}">${safe(e.identity.status)}</span></td></tr>`).join("")||'<tr><td colspan="8" style="text-align:center;color:var(--muted)">Call init(), then make an LLM request—or run an explicit probe.</td></tr>';
-        $("freshness").textContent=`Local data · refreshed ${new Date().toLocaleTimeString()}`;
+        $("freshness").textContent=`Live data · refreshed ${new Date().toLocaleTimeString()}`;
       } catch(error) { $("freshness").textContent="Dashboard API unavailable"; $("freshness").previousElementSibling.style.background="var(--red)"; }
     }
-    refresh(); setInterval(refresh,10000);
+    $("connect").addEventListener("click",()=>{ collectorToken=$("token").value; $("token").value=""; refresh(); });
+    $("token").addEventListener("keydown",event=>{ if(event.key==="Enter") $("connect").click(); });
+    refresh(); setInterval(refresh,5000);
   </script>
 </body>
 </html>
