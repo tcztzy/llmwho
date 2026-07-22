@@ -11,6 +11,7 @@
 - default capture ⊥ raw prompt/response; default capture derived metadata only
 - secrets/API keys ∉ events, logs, errors, dashboard
 - active network requests only after explicit user call
+- output-affinity analysis accepts explicit caller-provided corpora only; passive capture/storage unchanged
 - identity result probabilistic; uncertainty/`unknown` first-class; ⊥ unsupported certainty claims
 - Python `>=3.10`; Node `>=18`; TypeScript declarations + ESM/CJS outputs
 - optional HTTP libraries remain optional imports
@@ -26,6 +27,8 @@
 - js: `import { init } from "llmwho"; const handle = init()` → idempotent `globalThis.fetch` hook
 - js: `handle.shutdown()` → restore owned fetch hook
 - js: `probe({ baseUrl, apiKey, model, suite: "smoke" })` → `Promise<ProbeReport>`
+- py: `llmwho.output_affinity_matrix(corpora, ngram_size=3, model_weight=0.8)` → JSON-safe style-divergence report
+- js: `outputAffinityMatrix(corpora, { ngramSize: 3, modelWeight: 0.8 })` → JSON-safe style-divergence report
 - cli: `llmwho summary [--json] [--storage PATH]`
 - cli: `llmwho dashboard [--host 127.0.0.1] [--port 7734] [--storage PATH]`
 - cli: `llmwho probe --base-url URL --model ID [--api-key-env NAME] [--suite smoke]`
@@ -59,6 +62,10 @@ V19: direct Anthropic Messages observations → same normalized Python/JS fields
 V20: Claude Code/Codex hook adapter → exit 0 & protocol-neutral stdout despite malformed input/telemetry failure; ⊥ network, transcript read, prompt/response/tool content, session/turn IDs persistence
 V21: hook state → hashed session filename + safe model/start time/input byte count only; Python/JS turn event parity for provider, operation, model, duration, outcome, input/output bytes, privacy
 V22: default identity inference → response body `model` only; undocumented model headers → no evidence
+V23: output-affinity metric → normalized UTF-16 character n-grams + pooled-background interpolation + averaged bidirectional KL in bits; diagonal `0`; deterministic
+V24: output-affinity Python/Node reports numerically agree; input corpora ⊥ network, persistence, observation events
+V25: output-affinity report exposes corpus/sample/config metadata; labels result style divergence, ⊥ identity/distillation proof
+V26: documentation contract tests normalize whitespace before semantic-fragment matching; formatting-only line wraps ! fail
 
 ## §T TASKS
 id|status|task|cites
@@ -73,8 +80,11 @@ T8|x|write README/tutorial/limitations; run cross-language release verification|
 T9|x|create GitHub repo, push source, publish PyPI/npm, tag release, install-verify registry artifacts|V17,V18
 T10|x|implement direct Anthropic Messages adapter, parity/privacy/stream tests, concise README examples|V1,V2,V3,V4,V5,V7,V11,V13,V15,V19,I.anthropic
 T11|x|implement Claude Code/Codex project-hook CLI adapters, safe turn state, configs, parity/fail-open tests, docs|V2,V3,V4,V5,V7,V8,V13,V15,V20,V21,I.agent-hook-cli
+T12|x|implement reproducible output-affinity matrix in Python/Node, public APIs, parity vectors, docs|V3,V5,V6,V12,V13,V23,V24,V25,I.py,I.js
 
 ## §B BUGS
 id|date|cause|fix
 B1|2026-07-20|README contract tests matched formatting and obsolete phrases|test semantic fragments; no new invariant
 B2|2026-07-21|doc contract required unsupported model-header evidence|V22
+B3|2026-07-22|output-affinity doc contract matched raw line wrapping|V26
+B4|2026-07-22|artifact smoke test assumed `npm pack --prefix` changed package cwd|run pack from `packages/node`; no new invariant

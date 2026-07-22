@@ -48,6 +48,19 @@ report = llmwho.probe(
 )
 ```
 
+Compare explicitly supplied output corpora without network or persistence:
+
+```python
+report = llmwho.output_affinity_matrix({
+    "reference": ["reference answer"],
+    "endpoint": ["endpoint answer"],
+})
+```
+
+The symmetric character-trigram distance measures surface style only. It does
+not prove model identity, distillation, or capability transfer. Full method and
+limits: [Output-affinity matrix](https://github.com/tcztzy/llmwho/blob/main/docs/OUTPUT_AFFINITY.md).
+
 Inspect local history:
 
 ```bash

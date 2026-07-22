@@ -17,6 +17,7 @@ class RepositoryContractTests(unittest.TestCase):
             "docs/RESEARCH.md",
             "docs/STABILITY.md",
             "docs/AGENT_HOOKS.md",
+            "docs/OUTPUT_AFFINITY.md",
             "examples/hooks/claude-code.settings.json",
             "examples/hooks/codex.hooks.json",
             "SECURITY.md",
@@ -117,6 +118,27 @@ class RepositoryContractTests(unittest.TestCase):
             "identity remains `unknown`",
         ):
             self.assertIn(phrase, guide)
+
+    def test_v26_output_affinity_docs_state_method_and_claim_boundary(self) -> None:
+        readme = " ".join((ROOT / "README.md").read_text(encoding="utf-8").split())
+        method = " ".join(
+            (ROOT / "docs/OUTPUT_AFFINITY.md").read_text(encoding="utf-8").split()
+        )
+        for phrase in (
+            "output_affinity_matrix",
+            "outputAffinityMatrix",
+            "Similar style is not proof of model identity",
+        ):
+            self.assertIn(phrase, readme)
+        for phrase in (
+            "UTF-16 character n-grams",
+            "KL(P_A || Q_B)",
+            "Kimi K3 ↔ Fable 5",
+            "Adding or removing reference models changes it",
+            "not an identity detector",
+            "training-provenance detector",
+        ):
+            self.assertIn(phrase, method)
 
 
 if __name__ == "__main__":

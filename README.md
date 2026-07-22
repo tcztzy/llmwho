@@ -31,6 +31,10 @@ return values, exceptions, and streaming bodies stay under application control.
 > classifier. Identity conclusions remain evidence-backed and probabilistic;
 > every result can say `unknown`.
 
+LLMWho also exposes an explicit, offline output-affinity matrix. It compares
+caller-supplied response corpora but is not run by passive hooks and is not an
+identity or distillation classifier.
+
 ## Install
 
 Python 3.10+:
@@ -221,6 +225,38 @@ See [Stability model](docs/STABILITY.md) for the adaptation of continuous
 benchmark systems such as AI Stupid Level, and [Research landscape](docs/RESEARCH.md)
 for the peer-reviewed fingerprinting and API-drift work behind the roadmap.
 
+## Explicit output-affinity matrix
+
+Compare model prose locally with the reproducible, symmetric character-trigram
+divergence used by the recent Typebulb model-style matrix:
+
+```python
+from llmwho import output_affinity_matrix
+
+report = output_affinity_matrix({
+    "reference": ["reference answer one", "reference answer two"],
+    "endpoint": ["endpoint answer one", "endpoint answer two"],
+})
+print(report["matrix"][0][1])
+```
+
+```js
+import { outputAffinityMatrix } from "llmwho";
+
+const report = outputAffinityMatrix({
+  reference: ["reference answer one", "reference answer two"],
+  endpoint: ["endpoint answer one", "endpoint answer two"],
+});
+console.log(report.matrix[0][1]);
+```
+
+Lower values mean closer surface style. The function sends and stores nothing;
+the caller explicitly supplies raw outputs, and the report contains only
+derived counts and distances. Similar style is not proof of model identity,
+distillation, or capability transfer. See the exact formula, Typebulb fidelity
+check, experimental controls, and limitations in
+[Output-affinity matrix](docs/OUTPUT_AFFINITY.md).
+
 ## What is stored
 
 An event may include:
@@ -247,6 +283,8 @@ successful response or the application's original exception.
 - Passive production workloads change over time and are not a controlled
   benchmark.
 - The 0.2 smoke suite is a compatibility canary, not a broad intelligence score.
+- Output-affinity depends on its prompt set and pooled reference models; it
+  measures local writing style, not model provenance.
 
 Future detectors must be calibrated on held-out models and dates, reject
 open-set unknowns, preserve sample size and uncertainty, and explain their

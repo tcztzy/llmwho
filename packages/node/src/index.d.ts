@@ -61,6 +61,34 @@ export function probe(options: ProbeOptions): Promise<ProbeReport>;
 export function inferIdentity(claimedModel?: string, declaredModel?: string): ObservationV1["identity"];
 export function newObservation(options: Record<string, unknown>): ObservationV1;
 export function validateObservation(event: ObservationV1): void;
+export interface OutputAffinityOptions {
+  ngramSize?: number;
+  modelWeight?: number;
+}
+export interface OutputAffinityModel {
+  label: string;
+  documents: number;
+  characters: number;
+  ngrams: number;
+  entropy_bits: number;
+}
+export interface OutputAffinityReport {
+  metric: "symmetric_smoothed_char_ngram_kl";
+  interpretation: "style_divergence";
+  unit: "bits_per_character_ngram";
+  character_encoding: "utf-16-code-unit";
+  ngram_size: number;
+  model_weight: number;
+  background_weight: number;
+  models: OutputAffinityModel[];
+  matrix: number[][];
+  min_divergence: number;
+  max_divergence: number;
+}
+export function outputAffinityMatrix(
+  corpora: Record<string, Iterable<string>> | ReadonlyMap<string, Iterable<string>>,
+  options?: OutputAffinityOptions,
+): OutputAffinityReport;
 export class NDJSONStore {
   constructor(path?: string);
   path: string;
