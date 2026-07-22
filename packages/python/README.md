@@ -29,9 +29,14 @@ client.messages.create(
 
 One call instruments installed HTTPX (sync and async) and requests clients for
 recognized LLM routes. It writes content-free observations to
-`~/.llmwho/events.ndjson`; it never sends active traffic. Calls are idempotent,
+`~/.llmwho/events.jsonl`; it never sends active traffic. Calls are idempotent,
 streaming responses are not consumed, and `handle.shutdown()` safely restores
 only LLMWho-owned patches.
+
+The CLI also accepts content-free Claude Code and Codex lifecycle events:
+`llmwho hook claude-code|codex --event EVENT`. Project configuration and
+privacy details are in the
+[agent hook guide](https://github.com/tcztzy/llmwho/blob/main/docs/AGENT_HOOKS.md).
 
 Run an explicit OpenAI-compatible compatibility canary:
 
@@ -43,6 +48,20 @@ report = llmwho.probe(
 )
 ```
 
+Compare explicitly supplied output corpora without network or persistence:
+
+```python
+report = llmwho.science.output_affinity_matrix({
+    "reference": ["reference answer"],
+    "endpoint": ["endpoint answer"],
+})
+print(report["evidence"]["matrix"][0][1])
+```
+
+The symmetric character-trigram distance measures surface style only. It does
+not prove model identity, distillation, or capability transfer. Full method and
+limits: [Output-affinity matrix](https://github.com/tcztzy/llmwho/blob/main/docs/OUTPUT_AFFINITY.md).
+
 Inspect local history:
 
 ```bash
@@ -51,7 +70,8 @@ llmwho dashboard
 ```
 
 Identity results are probabilistic evidence, not cryptographic attestation.
-Version 0.2 uses response model metadata; its smoke suite measures capability
+Version 0.3 uses the response body's declared `model` field and ignores
+undocumented model response headers; its smoke suite measures capability
 and does not uniquely identify arbitrary model weights. Raw prompts, responses,
 headers, query strings, and credentials are never stored.
 

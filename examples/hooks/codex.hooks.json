@@ -1,0 +1,29 @@
+{
+  "description": "Content-free LLMWho turn observation for Codex",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "llmwho hook codex --event UserPromptSubmit",
+            "timeout": 5,
+            "statusMessage": "Starting LLMWho turn observation"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "llmwho hook codex --event Stop",
+            "timeout": 5,
+            "statusMessage": "Recording LLMWho turn observation"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -29,7 +29,7 @@ export interface InitOptions {
   endpoint?: string | ((url: string) => boolean);
 }
 export class HookHandle {
-  readonly store: NDJSONStore;
+  readonly store: JSONLStore;
   readonly endpoint?: InitOptions["endpoint"];
   readonly captureContent: false;
   active: boolean;
@@ -58,10 +58,90 @@ export interface ProbeReport {
   cases: Array<Record<string, unknown>>;
 }
 export function probe(options: ProbeOptions): Promise<ProbeReport>;
-export function inferIdentity(claimedModel?: string, declaredModel?: string, responseHeaders?: Record<string, string>): ObservationV1["identity"];
+export function inferIdentity(claimedModel?: string, declaredModel?: string): ObservationV1["identity"];
 export function newObservation(options: Record<string, unknown>): ObservationV1;
 export function validateObservation(event: ObservationV1): void;
-export class NDJSONStore {
+export interface OutputAffinityOptions {
+  ngramSize?: number;
+  modelWeight?: number;
+}
+export interface OutputAffinityModel {
+  label: string;
+  documents: number;
+  characters: number;
+  ngrams: number;
+  entropy_bits: number;
+}
+export interface OutputAffinityReport {
+  metric: "symmetric_smoothed_char_ngram_kl";
+  interpretation: "style_divergence";
+  unit: "bits_per_character_ngram";
+  character_encoding: "utf-16-code-unit";
+  ngram_size: number;
+  model_weight: number;
+  background_weight: number;
+  models: OutputAffinityModel[];
+  matrix: number[][];
+  min_divergence: number;
+  max_divergence: number;
+}
+export interface SciencePluginDescriptor {
+  id: string;
+  version: string;
+  summary: string;
+  required_inputs: string[];
+  source: string;
+}
+export interface AnalysisReport<T = Record<string, unknown>> {
+  schema_version: "1";
+  protocol_version: "1";
+  plugin: SciencePluginDescriptor;
+  evidence: T;
+  limitations: string[];
+}
+export interface ScienceRuntimeStatus {
+  uv_found: boolean;
+  uv_path: string;
+  uv_version: string | null;
+  uv_reason: string | null;
+  environment_ready: boolean;
+  environment_path: string;
+  environment_hash: string;
+  engine_version: string;
+  engine_source_hash: string;
+  python_version: string;
+  protocol_version: "1";
+  plugin_packages: string[];
+}
+export interface ScienceRuntimeOptions {
+  uvPath?: string;
+  cacheDir?: string;
+  pythonVersion?: string;
+  offline?: boolean;
+  pluginPackages?: string[];
+  onProgress?: (event: { stream: "stdout" | "stderr"; text: string }) => void;
+}
+export class ScienceRuntimeError extends Error {
+  constructor(code: string, message: string, cause?: unknown);
+  readonly code: string;
+}
+export class ScienceRuntimeManager {
+  constructor(options?: ScienceRuntimeOptions);
+  status(): Promise<ScienceRuntimeStatus>;
+  setup(options?: { offline?: boolean; onProgress?: ScienceRuntimeOptions["onProgress"] }): Promise<ScienceRuntimeStatus>;
+  plugins(): Promise<SciencePluginDescriptor[]>;
+  run<T = Record<string, unknown>>(
+    plugin: string,
+    payload: Record<string, unknown>,
+  ): Promise<AnalysisReport<T>>;
+  outputAffinityMatrix(
+    corpora: Record<string, Iterable<string>> | ReadonlyMap<string, Iterable<string>>,
+    options?: OutputAffinityOptions,
+  ): Promise<AnalysisReport<OutputAffinityReport>>;
+  shutdown(): Promise<void>;
+}
+export const science: ScienceRuntimeManager;
+export class JSONLStore {
   constructor(path?: string);
   path: string;
   append(event: ObservationV1): void;

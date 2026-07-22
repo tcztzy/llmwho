@@ -2,7 +2,7 @@
 
 ## MVP
 
-- Shared observation schema and local NDJSON storage.
+- Shared observation schema and local JSONL storage.
 - Python hooks for `requests` and `httpx`.
 - Node hook for `globalThis.fetch`.
 - OpenAI-compatible passive response parsing.
@@ -11,6 +11,8 @@
 - Evidence-based identity result with explicit `unknown`.
 - Local service, behavior, capability, and identity dashboard.
 - PyPI and npm releases.
+- uv-managed Python science runtime with versioned plugin discovery.
+- One authoritative output-affinity plugin shared by Python and Node.
 
 ## Next
 

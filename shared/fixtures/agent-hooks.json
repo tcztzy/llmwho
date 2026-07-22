@@ -1,0 +1,131 @@
+{
+  "claude-code": [
+    {
+      "now_ms": 1000,
+      "payload": {
+        "session_id": "claude-session-raw-secret",
+        "transcript_path": "/private/raw/claude-transcript.jsonl",
+        "cwd": "/workspace",
+        "hook_event_name": "SessionStart",
+        "source": "startup",
+        "model": "claude-sonnet-5"
+      }
+    },
+    {
+      "now_ms": 2000,
+      "payload": {
+        "session_id": "claude-session-raw-secret",
+        "transcript_path": "/private/raw/claude-transcript.jsonl",
+        "cwd": "/workspace",
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": "raw prompt sk-fixture-secret"
+      }
+    },
+    {
+      "now_ms": 3500,
+      "payload": {
+        "session_id": "claude-session-raw-secret",
+        "transcript_path": "/private/raw/claude-transcript.jsonl",
+        "cwd": "/workspace",
+        "hook_event_name": "Stop",
+        "stop_hook_active": false,
+        "last_assistant_message": "assistant raw secret"
+      },
+      "expected": {
+        "provider": "anthropic",
+        "host": "claude-code",
+        "path": "/stop",
+        "model": "claude-sonnet-5",
+        "outcome": "success",
+        "duration_ms": 1500,
+        "input_bytes": 28,
+        "output_bytes": 20
+      }
+    },
+    {
+      "now_ms": 4000,
+      "payload": {
+        "session_id": "claude-session-raw-secret",
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": "second raw prompt"
+      }
+    },
+    {
+      "now_ms": 4750,
+      "payload": {
+        "session_id": "claude-session-raw-secret",
+        "hook_event_name": "StopFailure",
+        "error": "rate_limit",
+        "error_details": "429 raw provider detail",
+        "last_assistant_message": "API Error: raw rate limit"
+      },
+      "expected": {
+        "provider": "anthropic",
+        "host": "claude-code",
+        "path": "/stopfailure",
+        "model": "claude-sonnet-5",
+        "outcome": "http_error",
+        "error_type": "rate_limit",
+        "duration_ms": 750,
+        "input_bytes": 17
+      }
+    },
+    {
+      "now_ms": 5000,
+      "payload": {
+        "session_id": "claude-session-raw-secret",
+        "hook_event_name": "SessionEnd",
+        "reason": "other"
+      }
+    }
+  ],
+  "codex": [
+    {
+      "now_ms": 10000,
+      "payload": {
+        "session_id": "codex-session-raw-secret",
+        "turn_id": "codex-turn-raw-secret",
+        "transcript_path": "/private/raw/codex-transcript.jsonl",
+        "cwd": "/workspace",
+        "hook_event_name": "UserPromptSubmit",
+        "model": "gpt-5.3-codex",
+        "prompt": "codex raw prompt sk-fixture-secret"
+      }
+    },
+    {
+      "now_ms": 11250,
+      "payload": {
+        "session_id": "codex-session-raw-secret",
+        "turn_id": "codex-turn-raw-secret",
+        "transcript_path": "/private/raw/codex-transcript.jsonl",
+        "cwd": "/workspace",
+        "hook_event_name": "Stop",
+        "model": "gpt-5.3-codex",
+        "stop_hook_active": false,
+        "last_assistant_message": "codex raw answer"
+      },
+      "expected": {
+        "provider": "openai",
+        "host": "codex",
+        "path": "/stop",
+        "model": "gpt-5.3-codex",
+        "outcome": "success",
+        "duration_ms": 1250,
+        "input_bytes": 34,
+        "output_bytes": 16
+      }
+    }
+  ],
+  "forbidden": [
+    "claude-session-raw-secret",
+    "codex-session-raw-secret",
+    "codex-turn-raw-secret",
+    "claude-transcript.jsonl",
+    "codex-transcript.jsonl",
+    "raw prompt",
+    "raw answer",
+    "raw secret",
+    "raw provider detail",
+    "sk-fixture-secret"
+  ]
+}

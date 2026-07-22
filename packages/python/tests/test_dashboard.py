@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -10,14 +8,14 @@ from urllib.request import urlopen
 
 from llmwho.dashboard import create_dashboard_server
 from llmwho.observation import new_observation
-from llmwho.storage import NDJSONStore
+from llmwho.storage import JSONLStore
 
 
 class DashboardTests(unittest.TestCase):
     def test_loopback_dashboard_serves_html_summary_and_events(self) -> None:
         with TemporaryDirectory() as directory:
-            path = Path(directory) / "events.ndjson"
-            store = NDJSONStore(path)
+            path = Path(directory) / "events.jsonl"
+            store = JSONLStore(path)
             store.append(
                 new_observation(
                     url="https://api.example/v1/chat/completions",

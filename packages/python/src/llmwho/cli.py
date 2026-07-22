@@ -1,12 +1,10 @@
 """LLMWho command-line interface."""
 
-from __future__ import annotations
-
 import argparse
 import json
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
-from .storage import NDJSONStore
+from .storage import JSONLStore
 from .summary import summarize
 from .version import __version__
 
@@ -17,7 +15,7 @@ def _parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
 
     summary = commands.add_parser("summary", help="summarize locally stored observations")
-    summary.add_argument("--storage", help="NDJSON event path")
+    summary.add_argument("--storage", help="JSONL event path")
     summary.add_argument("--json", action="store_true", help="print machine-readable JSON")
 
     dashboard = commands.add_parser("dashboard", help="start the local dashboard")
@@ -31,6 +29,11 @@ def _parser() -> argparse.ArgumentParser:
     probe.add_argument("--api-key-env", default="OPENAI_API_KEY")
     probe.add_argument("--suite", default="smoke")
     probe.add_argument("--storage")
+
+    hook = commands.add_parser("hook", help="observe an agent lifecycle hook")
+    hook.add_argument("client", choices=("claude-code", "codex"))
+    hook.add_argument("--event")
+    hook.add_argument("--storage")
     return parser
 
 
@@ -48,10 +51,10 @@ def _print_summary(report: dict, as_json: bool) -> None:
     print(f"capability probes: {report['capability']['probe_count']}")
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "summary":
-        _print_summary(summarize(NDJSONStore(args.storage).read()), args.json)
+        _print_summary(summarize(JSONLStore(args.storage).read()), args.json)
         return 0
     if args.command == "dashboard":
         from .dashboard import serve_dashboard
@@ -71,6 +74,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         )
         print(json.dumps(report, ensure_ascii=False, sort_keys=True))
         return 0 if report["completed"] else 1
+    if args.command == "hook":
+        from .agent_hooks import run_hook_cli
+
+        return run_hook_cli(
+            args.client,
+            expected_event=args.event,
+            storage_path=args.storage,
+        )
     return 2
 
 

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import json
 from pathlib import Path
@@ -8,7 +6,7 @@ import types
 import unittest
 
 from llmwho.hooks import HookHandle, _install_httpx, _install_requests, is_llm_url
-from llmwho.storage import NDJSONStore
+from llmwho.storage import JSONLStore
 
 
 class Headers(dict):
@@ -80,7 +78,7 @@ class HookTests(unittest.TestCase):
         original_sync = FakeHttpxClient.send
         original_async = FakeAsyncHttpxClient.send
         with TemporaryDirectory() as directory:
-            store = NDJSONStore(Path(directory) / "events.ndjson")
+            store = JSONLStore(Path(directory) / "events.jsonl")
             handle = HookHandle(store)
             _install_httpx(handle, module)
             request = HttpxRequest(
@@ -106,7 +104,7 @@ class HookTests(unittest.TestCase):
         )
         original = FakeRequestsSession.send
         with TemporaryDirectory() as directory:
-            store = NDJSONStore(Path(directory) / "events.ndjson")
+            store = JSONLStore(Path(directory) / "events.jsonl")
             handle = HookHandle(store)
             _install_requests(handle, module)
             response = FakeRequestsSession().send(
@@ -120,7 +118,7 @@ class HookTests(unittest.TestCase):
 
     def test_telemetry_failure_does_not_break_request(self) -> None:
         module = types.SimpleNamespace(Client=FakeHttpxClient, AsyncClient=FakeAsyncHttpxClient)
-        handle = HookHandle(NDJSONStore("/dev/null/impossible"))
+        handle = HookHandle(JSONLStore("/dev/null/impossible"))
         _install_httpx(handle, module)
         try:
             response = FakeHttpxClient().send(

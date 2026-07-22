@@ -1,6 +1,6 @@
 import { performance } from "node:perf_hooks";
 import { newObservation } from "./observation.js";
-import { NDJSONStore } from "./storage.js";
+import { JSONLStore } from "./storage.js";
 import { unhookedFetch } from "./hooks.js";
 import { VERSION } from "./version.js";
 
@@ -69,12 +69,6 @@ function identityRollup(events) {
   return { statuses, observed_models: observedModels };
 }
 
-function responseHeaders(response) {
-  const result = {};
-  response.headers.forEach((value, key) => { result[key] = value; });
-  return result;
-}
-
 export async function probe({
   baseUrl,
   model,
@@ -92,7 +86,7 @@ export async function probe({
   const url = chatUrl(baseUrl);
   const requestFetch = fetchImpl ?? unhookedFetch();
   if (typeof requestFetch !== "function") throw new Error("fetch is unavailable");
-  const store = new NDJSONStore(storagePath);
+  const store = new JSONLStore(storagePath);
   const startedAt = new Date().toISOString();
   const cases = [];
   const events = [];
@@ -121,7 +115,6 @@ export async function probe({
     let outcome = "network_error";
     let statusCode;
     let responsePayload;
-    let responseHeaderMap = {};
     let outputBytes = 0;
     try {
       const response = await Reflect.apply(requestFetch, globalThis, [url, {
@@ -131,7 +124,6 @@ export async function probe({
         signal: controller.signal,
       }]);
       statusCode = response.status;
-      responseHeaderMap = responseHeaders(response);
       const buffer = await response.arrayBuffer();
       outputBytes = buffer.byteLength;
       try {
@@ -168,7 +160,6 @@ export async function probe({
       source: "probe",
       claimedModel: model,
       declaredModel,
-      responseHeaders: responseHeaderMap,
       request: {
         operation: "chat.completions",
         claimed_model: model,

@@ -1,18 +1,17 @@
 """Explicit, judge-free active probe suite for OpenAI-compatible chat APIs."""
 
-from __future__ import annotations
-
 from datetime import datetime, timezone
 import json
 import socket
 from time import perf_counter
-from typing import Any, Callable, Optional
+from typing import Any
+from collections.abc import Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlsplit
 from urllib.request import Request, urlopen
 
 from .observation import new_observation
-from .storage import NDJSONStore
+from .storage import JSONLStore
 from .version import __version__
 
 
@@ -32,7 +31,7 @@ def _chat_url(base_url: str) -> str:
     return f"{clean}/v1/chat/completions"
 
 
-def _content(payload: Any) -> Optional[str]:
+def _content(payload: Any) -> str | None:
     try:
         value = payload["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError):
@@ -40,11 +39,11 @@ def _content(payload: Any) -> Optional[str]:
     return value if isinstance(value, str) else None
 
 
-def _exact(expected: str) -> Callable[[Optional[str]], bool]:
+def _exact(expected: str) -> Callable[[str | None], bool]:
     return lambda value: isinstance(value, str) and value.strip() == expected
 
 
-def _json_contract(value: Optional[str]) -> bool:
+def _json_contract(value: str | None) -> bool:
     if not isinstance(value, str):
         return False
     try:
@@ -81,7 +80,7 @@ SMOKE_CASES = (
 )
 
 
-def _request_redactions(url: str, api_key: Optional[str]) -> int:
+def _request_redactions(url: str, api_key: str | None) -> int:
     count = 1 if api_key else 0
     count += sum(
         1
@@ -111,9 +110,9 @@ def probe(
     *,
     base_url: str,
     model: str,
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
     suite: str = "smoke",
-    storage_path: Optional[str] = None,
+    storage_path: str | None = None,
     timeout: float = 30.0,
 ) -> dict[str, Any]:
     """Send the explicit smoke suite and return a content-free report."""
@@ -127,7 +126,7 @@ def probe(
     if timeout <= 0:
         raise ValueError("timeout must be positive")
     url = _chat_url(base_url)
-    store = NDJSONStore(storage_path)
+    store = JSONLStore(storage_path)
     started_at = _utc_now()
     cases = []
     events = []
@@ -157,14 +156,12 @@ def probe(
         status_code = None
         outcome = "network_error"
         response_payload = None
-        response_headers: dict[str, str] = {}
         output_size = 0
         try:
             with urlopen(Request(url, data=body, headers=headers, method="POST"), timeout=timeout) as response:
                 status_code = response.status
                 raw = response.read()
                 output_size = len(raw)
-                response_headers = dict(response.headers.items())
                 try:
                     parsed = json.loads(raw)
                     response_payload = parsed if isinstance(parsed, dict) else None
@@ -174,8 +171,7 @@ def probe(
         except HTTPError as error:
             status_code = error.code
             outcome = "http_error"
-            response_headers = dict(error.headers.items()) if error.headers else {}
-        except (TimeoutError, socket.timeout):
+        except TimeoutError:
             outcome = "timeout"
         except URLError as error:
             outcome = "timeout" if isinstance(error.reason, (TimeoutError, socket.timeout)) else "network_error"
@@ -199,7 +195,6 @@ def probe(
             source="probe",
             claimed_model=model,
             declared_model=declared,
-            response_headers=response_headers,
             request={
                 "operation": "chat.completions",
                 "claimed_model": model,

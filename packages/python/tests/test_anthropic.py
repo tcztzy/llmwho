@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import json
 from pathlib import Path
@@ -13,7 +11,7 @@ from llmwho.anthropic import (
     response_metadata,
 )
 from llmwho.hooks import HookHandle, _install_httpx
-from llmwho.storage import NDJSONStore
+from llmwho.storage import JSONLStore
 
 
 FIXTURE_PATH = (
@@ -111,7 +109,7 @@ class AnthropicAdapterTests(unittest.TestCase):
         _Client.response = _Response(fixture["response"])
         _AsyncClient.response = _Response(fixture["response"])
         with TemporaryDirectory() as directory:
-            store = NDJSONStore(Path(directory) / "events.ndjson")
+            store = JSONLStore(Path(directory) / "events.jsonl")
             handle = HookHandle(store)
             _install_httpx(handle, module)
             try:
@@ -146,7 +144,7 @@ class AnthropicAdapterTests(unittest.TestCase):
         _Client.response = _Response(fixture["response"], consumed=False)
         _AsyncClient.response = _Response(fixture["response"], consumed=False)
         with TemporaryDirectory() as directory:
-            store = NDJSONStore(Path(directory) / "events.ndjson")
+            store = JSONLStore(Path(directory) / "events.jsonl")
             handle = HookHandle(store)
             _install_httpx(handle, module)
             try:

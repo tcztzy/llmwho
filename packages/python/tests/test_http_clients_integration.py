@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import importlib.util
 import json
@@ -47,7 +45,7 @@ class RealClientIntegrationTests(unittest.TestCase):
         thread = Thread(target=server.serve_forever, daemon=True)
         thread.start()
         with TemporaryDirectory() as directory:
-            path = Path(directory) / "events.ndjson"
+            path = Path(directory) / "events.jsonl"
             handle = llmwho.init(storage_path=path)
             try:
                 url = f"http://127.0.0.1:{server.server_port}/v1/chat/completions"

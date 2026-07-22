@@ -1,0 +1,34 @@
+{
+  "parameters": {
+    "ngram_size": 3,
+    "model_weight": 0.8
+  },
+  "corpora": {
+    "Alpha": [
+      "Concise answer.\nSame format.",
+      "Shared ending 🙂"
+    ],
+    "Beta": [
+      "Concise reply.\tSame structure.",
+      "Shared ending 🙂"
+    ],
+    "Gamma": [
+      "Verbose alternative with different wording.",
+      "Unrelated symbols 🚀"
+    ]
+  },
+  "expected": {
+    "characters": [45, 47, 64],
+    "ngrams": [43, 45, 62],
+    "entropy_bits": [
+      5.379753126795121,
+      5.4474086518852305,
+      5.954196310386874
+    ],
+    "matrix": [
+      [0.0, 1.6366452416855615, 3.217468173925012],
+      [1.6366452416855615, 0.0, 3.271257307581397],
+      [3.217468173925012, 3.271257307581397, 0.0]
+    ]
+  }
+}

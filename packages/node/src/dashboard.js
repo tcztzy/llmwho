@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { NDJSONStore } from "./storage.js";
+import { JSONLStore } from "./storage.js";
 import { summarize } from "./summary.js";
 
 const MODULE_DIRECTORY = dirname(fileURLToPath(import.meta.url));
@@ -38,7 +38,7 @@ function sendJson(response, status, value) {
 }
 
 export function createDashboardServer({ storagePath } = {}) {
-  const store = new NDJSONStore(storagePath);
+  const store = new JSONLStore(storagePath);
   return createServer(async (request, response) => {
     const url = new URL(request.url, "http://localhost");
     if (request.method !== "GET") {

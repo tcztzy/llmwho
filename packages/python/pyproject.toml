@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "llmwho"
-version = "0.2.0"
+version = "0.3.0"
 description = "Passive LLM endpoint identity and stability instrumentation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,3 +35,19 @@ packages = ["src/llmwho"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/llmwho", "README.md", "LICENSE", "pyproject.toml"]
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["UP", "TID"]
+ignore = ["FA100", "FA102"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"__future__.annotations" = { msg = "Do not use from __future__ import annotations in Python 3.10+ code" }
+"typing.List" = { msg = "Use list[T]" }
+"typing.Dict" = { msg = "Use dict[K, V]" }
+"typing.Set" = { msg = "Use set[T]" }
+"typing.Tuple" = { msg = "Use tuple[...]" }
+"typing.Optional" = { msg = "Use T | None" }
+"typing.Union" = { msg = "Use A | B" }

@@ -9,7 +9,7 @@ import { init } from "../src/index.js";
 import { isLlmUrl } from "../src/hooks.js";
 
 function storagePath() {
-  return join(tmpdir(), `llmwho-hook-${randomUUID()}.ndjson`);
+  return join(tmpdir(), `llmwho-hook-${randomUUID()}.jsonl`);
 }
 
 async function settleTelemetry() {

@@ -35,7 +35,7 @@ test("smoke probe is deterministic and content-free", async () => {
     });
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const path = join(tmpdir(), `llmwho-probe-${randomUUID()}.ndjson`);
+  const path = join(tmpdir(), `llmwho-probe-${randomUUID()}.jsonl`);
   try {
     const address = server.address();
     const report = await probe({
@@ -51,6 +51,44 @@ test("smoke probe is deterministic and content-free", async () => {
     assert.equal(persisted.includes("probe-secret"), false);
     assert.equal(persisted.includes("Reply with exactly"), false);
     assert.equal(persisted.trim().split("\n").length, 4);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("V22: undocumented model response headers are ignored", async () => {
+  const server = createServer((request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    request.on("data", (chunk) => { body += chunk; });
+    request.on("end", () => {
+      const payload = JSON.parse(body);
+      const output = JSON.stringify({
+        choices: [{ message: { content: answerFor(payload.messages.at(-1).content) } }],
+      });
+      response.writeHead(200, {
+        "content-type": "application/json",
+        "x-model-id": "header-model-a",
+        "x-model-name": "header-model-b",
+        "x-model": "header-model-c",
+        "openai-model": "header-model-d",
+      });
+      response.end(output);
+    });
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const path = join(tmpdir(), `llmwho-probe-${randomUUID()}.jsonl`);
+  try {
+    const address = server.address();
+    const report = await probe({
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      model: "client-model",
+      storagePath: path,
+    });
+    assert.deepEqual(report.identity.statuses, { unknown: 4 });
+    assert.deepEqual(report.identity.observed_models, {});
+    const events = readFileSync(path, "utf8").trim().split("\n").map(JSON.parse);
+    assert.equal(events.every((event) => event.identity.evidence.length === 0), true);
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }

@@ -20,7 +20,7 @@ const fixture = JSON.parse(readFileSync(
 ));
 
 function storagePath() {
-  return join(tmpdir(), `llmwho-anthropic-${randomUUID()}.ndjson`);
+  return join(tmpdir(), `llmwho-anthropic-${randomUUID()}.jsonl`);
 }
 
 async function settleTelemetry() {

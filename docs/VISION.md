@@ -59,6 +59,11 @@ suites with deterministic checks. Active requests must never be triggered by
 `init()` and must be visibly opt-in because they consume money, rate limits,
 and provider capacity.
 
+Scientific analysis is a separate explicit plane. Python owns the canonical
+detector implementations and plugin registry; Node discovers uv, provisions a
+locked isolated environment, and calls the same plugins over local stdio.
+Import and `init()` must not inspect or prepare that runtime.
+
 ## Identity is an inference, not a magic label
 
 There is no universal black-box procedure that can identify every unknown LLM
@@ -94,7 +99,7 @@ never recorded. Derived features should be calculated in-process before raw
 content is discarded. Telemetry failures must never break the host request.
 
 The MVP is local-first. Its dashboard binds to loopback and reads a portable
-NDJSON event stream. Teams can later provide remote sinks without forcing a
+JSONL event stream. Teams can later provide remote sinks without forcing a
 hosted service on individual developers.
 
 ## Scope
@@ -115,3 +120,5 @@ new telemetry foundation.
   separately over time.
 - Every identity guess explains itself and can say `unknown`.
 - Published npm and PyPI packages expose matching concepts and event fields.
+- Python and Node science calls execute the same versioned Python plugins and
+  report plugin identity, evidence, limitations, and protocol version.

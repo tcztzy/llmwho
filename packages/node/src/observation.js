@@ -15,12 +15,12 @@ export function newObservation({
   url,
   durationMs,
   outcome,
+  errorType,
   source = "passive",
   modality = "text",
   provider,
   claimedModel,
   declaredModel,
-  responseHeaders,
   request,
   response,
   probe,
@@ -35,10 +35,11 @@ export function newObservation({
     sdk: { name: "llmwho-node", version: VERSION },
     endpoint: endpointFromUrl(url),
     transport: { outcome, duration_ms: Math.max(0, durationMs) },
-    identity: inferIdentity(claimedModel, declaredModel, responseHeaders),
+    identity: inferIdentity(claimedModel, declaredModel),
     privacy: { content_captured: false, redactions: Math.max(0, redactions) },
   };
   if (provider) event.endpoint.provider = provider;
+  if (errorType) event.transport.error_type = errorType;
   if (request) event.request = { ...request };
   if (response) event.response = { ...response };
   if (probe) event.probe = { ...probe };
