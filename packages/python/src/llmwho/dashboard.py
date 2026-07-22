@@ -3,6 +3,7 @@
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
+from typing import Protocol
 from urllib.parse import parse_qs, urlsplit
 
 from .storage import JSONLStore
@@ -12,12 +13,21 @@ from .summary import summarize
 HTML_PATH = Path(__file__).with_name("dashboard.html")
 
 
+class ReadableStore(Protocol):
+    def read(self, limit: int | None = None) -> list[dict]: ...
+
+
 class DashboardServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, address: tuple[str, int], store: JSONLStore) -> None:
+    def __init__(
+        self,
+        address: tuple[str, int],
+        store: ReadableStore,
+        handler_class: type[BaseHTTPRequestHandler] | None = None,
+    ) -> None:
         self.store = store
-        super().__init__(address, DashboardHandler)
+        super().__init__(address, handler_class or DashboardHandler)
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
@@ -77,10 +87,11 @@ def create_dashboard_server(
     storage_path: str | None = None,
     host: str = "127.0.0.1",
     port: int = 7734,
+    store: ReadableStore | None = None,
 ) -> DashboardServer:
     if not 0 <= port <= 65535:
         raise ValueError("port must be between 0 and 65535")
-    return DashboardServer((host, port), JSONLStore(storage_path))
+    return DashboardServer((host, port), store or JSONLStore(storage_path))
 
 
 def serve_dashboard(
