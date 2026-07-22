@@ -1,7 +1,7 @@
 # SPEC
 
 ## §G GOAL
-`llmwho` monorepo → one-call Python/Node hooks for passive LLM API observation, evidence-backed model identity guesses, opt-in active probes, local stability dashboard, published GitHub/PyPI/npm artifacts.
+`llmwho` monorepo → one-call Python/Node passive observation, self-hosted Collector + shared data layer, evidence-backed model identity guesses, opt-in active probes/science, live stability dashboard, published GitHub/PyPI/npm artifacts.
 
 ## §C CONSTRAINTS
 - repo: `/Users/tcztzy/GitHub/llmwho`
@@ -20,14 +20,21 @@
 - optional HTTP libraries remain optional imports
 - OpenAI-compatible transport first; passive generic detection for known LLM routes
 - dashboard binds loopback by default
+- v0.4 Collector owns shared SQLite writes; SDKs send validated content-free events over native HTTP or OTLP/HTTP
+- JSONL = local spool/interchange/archive; ⊥ concurrent multi-service database
+- Collector default single-node; scale-out storage ⊥ v0.4
+- OTLP = boundary transport; internal schema ⊥ coupled to evolving GenAI semantic conventions
+- remote Collector auth explicit; bearer token ∉ event/store/error response
 - MIT license; public research/design docs cite primary sources
 
 ## §I INTERFACES
 - py: `import llmwho; handle = llmwho.init()` → idempotent global hook install
 - py: `llmwho.init(storage_path=..., capture_content=False, endpoint=...)`
+- py: `llmwho.init(..., collector_url=..., collector_token=...)`; env fallback `LLMWHO_COLLECTOR_URL` / `LLMWHO_COLLECTOR_TOKEN`
 - py: `handle.shutdown()` → restore patched callables owned by handle
 - py: `llmwho.probe(base_url=..., api_key=..., model=..., suite="smoke")` → `ProbeReport`
 - js: `import { init } from "llmwho"; const handle = init()` → idempotent `globalThis.fetch` hook
+- js: `init({collectorUrl, collectorToken, ...})`; env fallback `LLMWHO_COLLECTOR_URL` / `LLMWHO_COLLECTOR_TOKEN`
 - js: `handle.shutdown()` → restore owned fetch hook
 - js: `probe({ baseUrl, apiKey, model, suite: "smoke" })` → `Promise<ProbeReport>`
 - py: `llmwho.science.output_affinity_matrix(corpora, ngram_size=3, model_weight=0.8)` → `AnalysisReport`
@@ -37,13 +44,17 @@
 - js-cli: `npx llmwho science status|setup|plugins [--offline]`
 - cli: `llmwho summary [--json] [--storage PATH]`
 - cli: `llmwho dashboard [--host 127.0.0.1] [--port 7734] [--storage PATH]`
+- cli: `llmwho collector [--host 127.0.0.1] [--port 7734] [--database PATH] [--token-env NAME]`
+- cli: `llmwho database import-jsonl|export-jsonl --database PATH --jsonl PATH`
 - cli: `llmwho probe --base-url URL --model ID [--api-key-env NAME] [--suite smoke]`
 - js-cli: `npx llmwho summary|dashboard|probe ...`
 - event: JSONL `ObservationV1` with `schema_version="1"`, timestamp, SDK, endpoint, transport, identity, behavior, privacy fields
 - anthropic: passive py/js hooks recognize direct `POST /v1/messages`; normalize `endpoint.provider="anthropic"`, `request.operation="messages"`, claimed model, stream, role count, byte counts, declared model, status, and input/output/total token usage; stream body ⊥ read/clone
 - agent-hook-cli: `llmwho hook claude-code|codex [--event EVENT] [--storage PATH]` reads one official lifecycle-hook JSON object from stdin; project `.claude/settings.json` / `.codex/hooks.json` configs emit content-free passive turn observations
 - dashboard: local `GET /`, `GET /api/summary`, `GET /api/events`
-- env: `LLMWHO_STORAGE`, `LLMWHO_CAPTURE_CONTENT`, `LLMWHO_DISABLED`
+- collector: `GET /api/health`, `GET /api/summary`, `GET /api/events`; `POST /api/v1/observations`; OTLP/HTTP JSON `POST /v1/logs`
+- store: Python `SQLiteStore(path)` + Python/Node `RemoteStore(url, token=...)`; `append`, `read`, `close`
+- env: `LLMWHO_STORAGE`, `LLMWHO_CAPTURE_CONTENT`, `LLMWHO_DISABLED`, `LLMWHO_COLLECTOR_URL`, `LLMWHO_COLLECTOR_TOKEN`
 
 ## §V INVARIANTS
 V1: ∀ process, repeated `init()` → one hook layer & shared handle; shutdown restores only LLMWho-owned patch
@@ -79,6 +90,15 @@ V30: output-affinity has one Python implementation behind plugin protocol; Node 
 V31: science worker uses versioned JSONL request/response protocol; raw analysis input ⊥ persistence/observation event/error echo; plugin result includes id/version/evidence/limitations
 V32: release tag = `v` + Python/npm/module version; CI tests/builds/smoke-installs immutable artifacts before separate PyPI/npm OIDC environment jobs; registry token ⊥ GitHub secrets; GitHub Release only after both registry publishes succeed
 V33: npm tarball publish uses explicit `./` filesystem spec; partial registry recovery rebuilds from immutable tag, publishes only selected missing registry, verifies same version exists on PyPI/npm before GitHub Release
+V34: SQLite Collector store → WAL + `event_id` uniqueness + deterministic timestamp order; duplicate ingest idempotent; only Collector writes shared DB
+V35: shared DB schema → observations, probe runs, analysis results, alerts, reference profiles; records append-only; JSONL only import/export/local spool
+V36: native/OTLP Collector ingest validates complete `ObservationV1` before persistence; raw content/secret/invalid event → reject entire request, persist none
+V37: Collector binds loopback by default; non-loopback → explicit bearer token; compare constant-time; token ∉ persistence/log/error body
+V38: OTLP/HTTP JSON log mapping carries content-free `ObservationV1`; unsupported encoding → explicit 415; unknown OTLP fields ignored
+V39: Python/Node remote sink → bounded non-blocking delivery, uninstrumented transport, fail-open host request, best-effort flush on shutdown; disabled/unconfigured → local JSONL
+V40: Python/Node Collector config and wire payload parity; auth uses `Authorization: Bearer`; credentials ∉ events
+V41: Collector dashboard reads same SQLite repository as ingest and polls live; availability/transport/behavior/capability/identity separation preserved
+V42: v0.4 deployable as one Python process/container; `collector` includes ingest + dashboard; no external runtime dependency beyond Python stdlib
 
 ## §T TASKS
 id|status|task|cites
@@ -100,6 +120,11 @@ T15|x|make tag release selectively recoverable after partial registry publish; v
 T16|x|make registry-verified GitHub Release run after intentionally skipped recovery publish jobs|V32,V33
 T17|x|skip registry publish dry-run when recovery only rebuilds already-published artifacts|V17,V32,V33
 T18|x|pass explicit repository context to isolated GitHub Release job without source checkout|V32,V33
+T19|x|implement SQLite shared repository, schema, idempotence, JSONL import/export, tests|V2,V3,V7,V34,V35,V36,I.store
+T20|.|implement authenticated Collector native + OTLP ingest, shared dashboard/query API, CLI, tests|V2,V3,V9,V13,V14,V34,V36,V37,V38,V41,I.collector,I.cli
+T21|.|implement bounded fail-open Python/Node remote sinks, init/env config, shutdown flush, parity tests|V1,V2,V3,V4,V5,V7,V13,V39,V40,I.py,I.js,I.store
+T22|.|ship all-in-one container, live Collector docs/tutorial/security guidance, contract tests|V2,V3,V9,V16,V37,V41,V42
+T23|.|bump v0.4 versions; run Python/Node lint, type, test, build, install, repository gates|V17,V18,V32,V33,V42
 
 ## §B BUGS
 id|date|cause|fix
