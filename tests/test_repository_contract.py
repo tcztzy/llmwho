@@ -240,7 +240,11 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(release.count("id-token: write"), 2)
         self.assertIn("name: pypi", release)
         self.assertIn("name: npm", release)
-        self.assertIn("needs: [publish-pypi, publish-npm]", release)
+        self.assertIn(
+            "needs: [build-python, build-node, publish-pypi, publish-npm]",
+            release,
+        )
+        self.assertIn("needs: verify-registries", release)
         self.assertNotIn("secrets.", release)
         self.assertNotIn("NODE_AUTH_TOKEN", release)
         for workflow in (ci, release):
@@ -255,6 +259,22 @@ class RepositoryContractTests(unittest.TestCase):
             "rerun only the failed job",
         ):
             self.assertIn(phrase, guide)
+
+    def test_v33_partial_release_recovery_preserves_tag_and_artifacts(self) -> None:
+        release = (ROOT / ".github/workflows/release.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("workflow_dispatch:", release)
+        self.assertIn("RELEASE_TAG:", release)
+        self.assertIn("RELEASE_REF:", release)
+        self.assertIn("ref: ${{ env.RELEASE_REF }}", release)
+        self.assertIn("npm publish ./dist/*.tgz --access public", release)
+        self.assertNotIn("npm publish dist/*.tgz --access public", release)
+        self.assertIn("inputs.publish_pypi", release)
+        self.assertIn("inputs.publish_npm", release)
+        self.assertIn("verify-registries:", release)
+        self.assertIn("needs: verify-registries", release)
 
 
 if __name__ == "__main__":

@@ -78,6 +78,7 @@ V29: science plugin discovery → built-ins + Python `llmwho.science.plugins` en
 V30: output-affinity has one Python implementation behind plugin protocol; Node API async; ⊥ JS numeric fallback/duplicate algorithm; Python/Node result parity exact after transport
 V31: science worker uses versioned JSONL request/response protocol; raw analysis input ⊥ persistence/observation event/error echo; plugin result includes id/version/evidence/limitations
 V32: release tag = `v` + Python/npm/module version; CI tests/builds/smoke-installs immutable artifacts before separate PyPI/npm OIDC environment jobs; registry token ⊥ GitHub secrets; GitHub Release only after both registry publishes succeed
+V33: npm tarball publish uses explicit `./` filesystem spec; partial registry recovery rebuilds from immutable tag, publishes only selected missing registry, verifies same version exists on PyPI/npm before GitHub Release
 
 ## §T TASKS
 id|status|task|cites
@@ -95,6 +96,7 @@ T11|x|implement Claude Code/Codex project-hook CLI adapters, safe turn state, co
 T12|x|implement reproducible output-affinity matrix in Python/Node, public APIs, parity vectors, docs|V3,V5,V6,V12,V13,V23,V24,V25,I.py,I.js
 T13|x|replace dual output-affinity with uv-managed Python science plugin runtime, async Node bridge, CLI, packaging, tests, docs|V3,V5,V13,V15,V17,V18,V23,V25,V27,V28,V29,V30,V31,I.py,I.js,I.js-cli
 T14|x|add pull-request CI and tag-driven OIDC publishing for PyPI/npm/GitHub Releases|V17,V18,V32
+T15|x|make tag release selectively recoverable after partial registry publish; verify both registries before GitHub Release|V17,V18,V32,V33
 
 ## §B BUGS
 id|date|cause|fix
@@ -102,3 +104,4 @@ B1|2026-07-20|README contract tests matched formatting and obsolete phrases|test
 B2|2026-07-21|doc contract required unsupported model-header evidence|V22
 B3|2026-07-22|output-affinity doc contract matched raw line wrapping|V26
 B4|2026-07-22|artifact smoke test assumed `npm pack --prefix` changed package cwd|run pack from `packages/node`; no new invariant
+B5|2026-07-22|npm 12 parsed bare `dist/*.tgz` as GitHub shorthand after PyPI publish succeeded|V33

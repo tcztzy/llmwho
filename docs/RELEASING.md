@@ -38,7 +38,21 @@ identity permission.
 3. Verify locally with `node scripts/check-release-tag.mjs vX.Y.Z`.
 4. Create and push an annotated `vX.Y.Z` tag.
 5. Watch the `Release` workflow. If one registry job fails after the other has
-   published, rerun only the failed job; registry versions are immutable.
+   published, rerun only the failed job; registry versions are immutable. If
+   the workflow itself needs a fix, merge that fix and dispatch `release.yml`
+   against the same immutable tag with only the missing registry selected:
+
+   ```bash
+   gh workflow run release.yml \
+     --field tag=vX.Y.Z \
+     --field publish_pypi=false \
+     --field publish_npm=true
+   ```
+
+The recovery run checks out and rebuilds the existing tag. It verifies that the
+same version exists on both registries before creating or updating the GitHub
+Release. npm tarballs are passed as explicit `./dist/*.tgz` filesystem paths so
+the npm CLI cannot parse them as package or GitHub shorthand.
 
 Do not move or reuse a release tag. Prepare a new patch version for any change
 after a registry has accepted the release.
