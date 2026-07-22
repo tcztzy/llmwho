@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -70,6 +71,37 @@ class CoreTests(unittest.TestCase):
         event["request"]["messages"] = [{"content": "secret"}]
         with self.assertRaisesRegex(ValueError, "raw content field"):
             validate_observation(event)
+
+    def test_v36_complete_schema_validation_rejects_unknown_and_malformed_fields(
+        self,
+    ) -> None:
+        valid = new_observation(
+            url="https://api.example.test/v1/chat/completions",
+            duration_ms=25,
+            outcome="success",
+            claimed_model="model-a",
+            declared_model="model-a",
+            response={"usage": {"input_tokens": 1}},
+        )
+        cases = []
+        unknown = deepcopy(valid)
+        unknown["unexpected"] = True
+        cases.append(unknown)
+        missing_nested = deepcopy(valid)
+        del missing_nested["sdk"]["version"]
+        cases.append(missing_nested)
+        invalid_port = deepcopy(valid)
+        invalid_port["endpoint"]["port"] = 0
+        cases.append(invalid_port)
+        boolean_integer = deepcopy(valid)
+        boolean_integer["response"]["usage"]["input_tokens"] = True
+        cases.append(boolean_integer)
+        invalid_timestamp = deepcopy(valid)
+        invalid_timestamp["timestamp"] = "not-a-date"
+        cases.append(invalid_timestamp)
+        for event in cases:
+            with self.subTest(event=event), self.assertRaises(ValueError):
+                validate_observation(event)
 
     def test_summary_keeps_layers_separate(self) -> None:
         rows = []

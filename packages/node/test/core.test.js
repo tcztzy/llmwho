@@ -65,6 +65,37 @@ test("store rejects raw content and round trips", () => {
   assert.throws(() => validateObservation(event), /raw content field/);
 });
 
+test("V36: complete schema validation rejects unknown and malformed fields", () => {
+  const valid = newObservation({
+    url: "https://api.example.test/v1/chat/completions",
+    durationMs: 25,
+    outcome: "success",
+    claimedModel: "model-a",
+    declaredModel: "model-a",
+    response: { usage: { input_tokens: 1 } },
+  });
+  const copy = () => JSON.parse(JSON.stringify(valid));
+  const unknown = copy();
+  unknown.unexpected = true;
+  const missingNested = copy();
+  delete missingNested.sdk.version;
+  const invalidPort = copy();
+  invalidPort.endpoint.port = 0;
+  const booleanInteger = copy();
+  booleanInteger.response.usage.input_tokens = true;
+  const invalidTimestamp = copy();
+  invalidTimestamp.timestamp = "not-a-date";
+  for (const event of [
+    unknown,
+    missingNested,
+    invalidPort,
+    booleanInteger,
+    invalidTimestamp,
+  ]) {
+    assert.throws(() => validateObservation(event));
+  }
+});
+
 test("summary keeps layers separate", () => {
   const rows = [
     [10, "success", "a"],

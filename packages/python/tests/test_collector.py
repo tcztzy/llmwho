@@ -131,6 +131,17 @@ class CollectorTests(unittest.TestCase):
                 self.assertNotIn("must never persist", rejected.exception.read().decode())
                 rejected.exception.close()
 
+                unknown = event("event-4")
+                unknown["unexpected"] = "not in ObservationV1"
+                with self.assertRaises(HTTPError) as malformed:
+                    collector.request(
+                        "/api/v1/observations",
+                        method="POST",
+                        payload={"observations": [unknown]},
+                    )
+                self.assertEqual(malformed.exception.code, 400)
+                malformed.exception.close()
+
                 with collector.request("/api/summary") as response:
                     self.assertEqual(json.load(response)["events"], 1)
                 with collector.request("/api/events?limit=10") as response:
