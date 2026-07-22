@@ -49,20 +49,26 @@ const report = await probe({
 });
 ```
 
-Compare explicitly supplied output corpora without network or persistence:
+Run the authoritative Python output-affinity plugin:
 
 ```js
-import { outputAffinityMatrix } from "llmwho";
+import { science } from "llmwho";
 
-const report = outputAffinityMatrix({
+const analysis = await science.outputAffinityMatrix({
   reference: ["reference answer"],
   endpoint: ["endpoint answer"],
 });
+console.log(analysis.evidence.matrix[0][1]);
 ```
 
-The symmetric character-trigram distance measures surface style only. It does
-not prove model identity, distillation, or capability transfer. Full method and
-limits: [Output-affinity matrix](https://github.com/tcztzy/llmwho/blob/main/docs/OUTPUT_AFFINITY.md).
+Science calls discover [uv](https://docs.astral.sh/uv/) and create a locked,
+cached Python environment. Package import, npm installation, and `init()` do
+not perform setup. Inspect or prepare it with `npx llmwho science status|setup`;
+add `--offline` to prohibit downloads. The symmetric character-trigram distance
+measures surface style only. It does not prove model identity, distillation, or
+capability transfer. Full [science runtime](https://github.com/tcztzy/llmwho/blob/main/docs/SCIENCE_RUNTIME.md)
+and [output-affinity](https://github.com/tcztzy/llmwho/blob/main/docs/OUTPUT_AFFINITY.md)
+documentation is available in the repository.
 
 Inspect local history:
 
@@ -73,7 +79,7 @@ npx llmwho dashboard
 
 The package provides ESM and CommonJS entry points plus TypeScript declarations.
 Identity results are probabilistic evidence, not cryptographic attestation.
-Version 0.2 uses the response body's declared `model` field and ignores
+Version 0.3 uses the response body's declared `model` field and ignores
 undocumented model response headers; its smoke suite measures capability
 and does not uniquely identify arbitrary model weights. Raw prompts, responses,
 headers, query strings, and credentials are never stored.

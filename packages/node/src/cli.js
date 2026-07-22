@@ -1,12 +1,22 @@
 import { NDJSONStore } from "./storage.js";
 import { summarize } from "./summary.js";
 import { VERSION } from "./version.js";
+import { ScienceRuntimeManager } from "./science-runtime.js";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 function option(args, name, fallback) {
   const index = args.indexOf(name);
   return index === -1 ? fallback : args[index + 1];
+}
+
+function options(args, name) {
+  const values = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === name && args[index + 1] !== undefined
+        && !args[index + 1].startsWith("--")) values.push(args[index + 1]);
+  }
+  return values;
 }
 
 function printSummary(report, json) {
@@ -23,7 +33,7 @@ function printSummary(report, json) {
   process.stdout.write(`capability probes: ${report.capability.probe_count}\n`);
 }
 
-export async function main(argv = process.argv.slice(2)) {
+export async function main(argv = process.argv.slice(2), dependencies = {}) {
   if (argv.includes("--version")) {
     process.stdout.write(`llmwho ${VERSION}\n`);
     return 0;
@@ -69,7 +79,33 @@ export async function main(argv = process.argv.slice(2)) {
       storagePath: option(argv, "--storage", undefined),
     });
   }
-  process.stderr.write("usage: llmwho summary|dashboard|probe|hook [options]\n");
+  if (command === "science") {
+    const action = argv[1];
+    if (!["status", "setup", "plugins"].includes(action)) {
+      process.stderr.write("usage: llmwho science status|setup|plugins [options]\n");
+      return 2;
+    }
+    const runtime = (dependencies.createScienceRuntime ?? ((config) => new ScienceRuntimeManager(config)))({
+      uvPath: option(argv, "--uv", undefined),
+      cacheDir: option(argv, "--cache-dir", undefined),
+      pythonVersion: option(argv, "--python", undefined),
+      offline: argv.includes("--offline"),
+      pluginPackages: options(argv, "--plugin"),
+      onProgress: ({ text }) => process.stderr.write(text),
+    });
+    try {
+      const report = action === "status"
+        ? await runtime.status()
+        : action === "setup"
+          ? await runtime.setup()
+          : await runtime.plugins();
+      process.stdout.write(`${JSON.stringify(report)}\n`);
+      return action === "status" && !report.uv_found && !report.environment_ready ? 1 : 0;
+    } finally {
+      await runtime.shutdown();
+    }
+  }
+  process.stderr.write("usage: llmwho summary|dashboard|probe|hook|science [options]\n");
   return 2;
 }
 
@@ -81,5 +117,10 @@ try {
   isMain = false;
 }
 if (isMain) {
-  process.exitCode = await main();
+  try {
+    process.exitCode = await main();
+  } catch (error) {
+    process.stderr.write(`llmwho: ${error.code ?? "ERROR"}: ${error.message}\n`);
+    process.exitCode = 1;
+  }
 }

@@ -11,6 +11,8 @@
 - Evidence-based identity result with explicit `unknown`.
 - Local service, behavior, capability, and identity dashboard.
 - PyPI and npm releases.
+- uv-managed Python science runtime with versioned plugin discovery.
+- One authoritative output-affinity plugin shared by Python and Node.
 
 ## Next
 

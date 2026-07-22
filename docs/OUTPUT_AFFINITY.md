@@ -18,32 +18,34 @@ or that capabilities transferred between them.
 Python:
 
 ```python
-from llmwho import output_affinity_matrix
+from llmwho import science
 
-report = output_affinity_matrix({
+analysis = science.output_affinity_matrix({
     "reference": ["First reference answer", "Second reference answer"],
     "endpoint": ["First endpoint answer", "Second endpoint answer"],
 })
 
-distance = report["matrix"][0][1]
+distance = analysis["evidence"]["matrix"][0][1]
 ```
 
 Node.js:
 
 ```js
-import { outputAffinityMatrix } from "llmwho";
+import { science } from "llmwho";
 
-const report = outputAffinityMatrix({
+const analysis = await science.outputAffinityMatrix({
   reference: ["First reference answer", "Second reference answer"],
   endpoint: ["First endpoint answer", "Second endpoint answer"],
 });
 
-const distance = report.matrix[0][1];
+const distance = analysis.evidence.matrix[0][1];
 ```
 
-Both functions are pure calculations. They make no network request, write no
-file or observation event, and return no source prose. The caller explicitly
-supplies and remains responsible for any raw text held in memory.
+Both APIs execute the same Python plugin. The calculation makes no provider
+request, writes no corpus or observation event, and returns no source prose.
+Node may first ask uv to provision the locked science environment; use
+`science.setup({ offline: true })` to prohibit downloads. The caller explicitly
+supplies and remains responsible for raw text held in memory.
 
 ## Exact calculation
 
@@ -76,14 +78,18 @@ candidate or distillation verdict.
 ## Fidelity check
 
 The repository's shared synthetic vector exercises whitespace, punctuation,
-multiple documents, and non-BMP characters in both implementations. We also
-ran both implementations over the public 2026-07-18 Typebulb snapshot:
+multiple documents, and non-BMP characters through direct Python and Node
+worker calls. We also ran the earlier dual implementations over the public
+2026-07-18 Typebulb snapshot while validating the formula:
 
 - 22 model corpora and 176 evaluation records were recovered;
 - Node reproduced Kimi K3 ↔ Fable 5 as `0.4211233616031489` bits;
 - Python produced `0.42112336160329455` bits;
-- maximum Python/Node absolute difference across all 484 matrix cells was
-  `1.34e-12`, attributable to platform `log2` rounding.
+- the former implementations differed by at most `1.34e-12` across 484 matrix
+  cells because of platform `log2` rounding.
+
+Version 0.3 removes that divergence: Node returns the Python plugin's serialized
+numbers without reimplementing the calculation.
 
 The public snapshot is not vendored because it contains third-party model
 prose. Network-free tests instead use

@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { test } from "node:test";
 import { randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
 
 import {
   NDJSONStore,
@@ -15,7 +16,7 @@ import {
 } from "../src/index.js";
 import { endpointFromUrl, redactHeaders, redactText } from "../src/privacy.js";
 
-const ROOT = join(import.meta.dirname, "..", "..", "..");
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
 test("shared fixture is accepted", () => {
   const fixture = JSON.parse(readFileSync(join(ROOT, "shared", "fixtures", "observation-v1.json")));

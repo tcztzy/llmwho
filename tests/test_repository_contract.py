@@ -7,6 +7,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RepositoryContractTests(unittest.TestCase):
+    def test_release_versions_match_across_packages_and_bundled_engine(self) -> None:
+        node = json.loads((ROOT / "packages/node/package.json").read_text())
+        python_project = (ROOT / "packages/python/pyproject.toml").read_text()
+        python_version = (ROOT / "packages/python/src/llmwho/version.py").read_text()
+        node_version = (ROOT / "packages/node/src/version.js").read_text()
+        version = node["version"]
+        self.assertIn(f'version = "{version}"', python_project)
+        self.assertIn(f'__version__ = "{version}"', python_version)
+        self.assertIn(f'VERSION = "{version}"', node_version)
+
     def test_public_project_files_exist(self) -> None:
         for relative in (
             "README.md",
@@ -18,6 +28,7 @@ class RepositoryContractTests(unittest.TestCase):
             "docs/STABILITY.md",
             "docs/AGENT_HOOKS.md",
             "docs/OUTPUT_AFFINITY.md",
+            "docs/SCIENCE_RUNTIME.md",
             "examples/hooks/claude-code.settings.json",
             "examples/hooks/codex.hooks.json",
             "SECURITY.md",
@@ -65,7 +76,7 @@ class RepositoryContractTests(unittest.TestCase):
             "declared `model` field",
             "Undocumented model response headers are ignored",
             "Active probes cost requests and are never triggered by `init()`",
-            "Raw content capture is deliberately unavailable in 0.2",
+            "Raw content capture is deliberately unavailable in 0.3",
             "Capability similarity does not uniquely identify model weights",
         ):
             self.assertIn(phrase, readme)
@@ -137,8 +148,31 @@ class RepositoryContractTests(unittest.TestCase):
             "Adding or removing reference models changes it",
             "not an identity detector",
             "training-provenance detector",
+            "same Python plugin",
         ):
             self.assertIn(phrase, method)
+
+    def test_science_runtime_contract_is_explicit_and_separate_from_init(self) -> None:
+        readme = " ".join((ROOT / "README.md").read_text(encoding="utf-8").split())
+        runtime = " ".join(
+            (ROOT / "docs/SCIENCE_RUNTIME.md").read_text(encoding="utf-8").split()
+        )
+        for phrase in (
+            "npx llmwho science status",
+            "await science.outputAffinityMatrix",
+            "Executable plugin packages are trusted code",
+        ):
+            self.assertIn(phrase, readme)
+        for phrase in (
+            "do not search for uv",
+            "uv sync --frozen --no-dev --no-editable --no-install-project",
+            "llmwho.science.plugins",
+            "does not write it to event storage",
+            "reference fingerprint",
+        ):
+            self.assertIn(phrase, runtime)
+        self.assertFalse((ROOT / "packages/node/src/output-affinity.js").exists())
+        self.assertFalse((ROOT / "packages/python/src/llmwho/output_affinity.py").exists())
 
 
 if __name__ == "__main__":

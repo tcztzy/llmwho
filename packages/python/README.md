@@ -51,10 +51,11 @@ report = llmwho.probe(
 Compare explicitly supplied output corpora without network or persistence:
 
 ```python
-report = llmwho.output_affinity_matrix({
+report = llmwho.science.output_affinity_matrix({
     "reference": ["reference answer"],
     "endpoint": ["endpoint answer"],
 })
+print(report["evidence"]["matrix"][0][1])
 ```
 
 The symmetric character-trigram distance measures surface style only. It does
@@ -69,7 +70,7 @@ llmwho dashboard
 ```
 
 Identity results are probabilistic evidence, not cryptographic attestation.
-Version 0.2 uses the response body's declared `model` field and ignores
+Version 0.3 uses the response body's declared `model` field and ignores
 undocumented model response headers; its smoke suite measures capability
 and does not uniquely identify arbitrary model weights. Raw prompts, responses,
 headers, query strings, and credentials are never stored.

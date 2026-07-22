@@ -1,9 +1,4 @@
-"""Character n-gram output-style divergence.
-
-This module reproduces the Typebulb output-affinity matrix: each model's
-explicitly supplied outputs become a UTF-16 character n-gram distribution,
-then pairwise distance is the mean of both background-smoothed KL directions.
-"""
+"""Built-in character n-gram output-affinity science plugin."""
 
 from __future__ import annotations
 
@@ -32,15 +27,26 @@ class _Profile:
     entropy_bits: float
 
 
+def _ordered_corpora(value: Any) -> Mapping[str, Iterable[str]]:
+    if isinstance(value, Mapping):
+        return value
+    if not isinstance(value, list):
+        raise TypeError("corpora must be a mapping or ordered entry list")
+    result: dict[str, Iterable[str]] = {}
+    for entry in value:
+        if not isinstance(entry, list) or len(entry) != 2:
+            raise TypeError("corpora entries must be label/document pairs")
+        label, documents = entry
+        if not isinstance(label, str) or not label or label in result:
+            raise ValueError("corpus labels must be unique non-empty strings")
+        result[label] = documents
+    return result
+
+
 def _normalize(text: str) -> str:
     r"""Match JavaScript's ``text.replace(/\s+/gu, " ").trim()``."""
 
     return _JS_WHITESPACE.sub(" ", text).strip(" ")
-
-
-def _utf16le(text: str) -> bytes:
-    # JavaScript strings and the source implementation count UTF-16 code units.
-    return text.encode("utf-16-le", errors="surrogatepass")
 
 
 def _profile(label: str, outputs: Iterable[str], ngram_size: int) -> _Profile:
@@ -56,7 +62,7 @@ def _profile(label: str, outputs: Iterable[str], ngram_size: int) -> _Profile:
         raise TypeError(f"corpus {label!r} documents must be strings")
 
     text = _normalize(" ".join(documents))
-    encoded = _utf16le(text)
+    encoded = text.encode("utf-16-le", errors="surrogatepass")
     characters = len(encoded) // 2
     if characters < ngram_size:
         raise ValueError(
@@ -91,18 +97,13 @@ def _directed_divergence(
     return cross_entropy - source.entropy_bits
 
 
-def output_affinity_matrix(
+def calculate_output_affinity(
     corpora: Mapping[str, Iterable[str]],
     *,
     ngram_size: int = 3,
     model_weight: float = 0.8,
 ) -> dict[str, Any]:
-    """Return a JSON-safe pairwise output-style divergence report.
-
-    ``corpora`` maps each model label to its response documents. Lower matrix
-    values mean closer surface style. The function performs no network or disk
-    I/O and does not infer model identity or training provenance.
-    """
+    """Calculate deterministic output-style evidence without I/O."""
 
     if not isinstance(corpora, Mapping):
         raise TypeError("corpora must be a mapping of labels to string iterables")
@@ -127,15 +128,13 @@ def output_affinity_matrix(
 
     background: Counter[bytes] = Counter()
     background_ngrams = 0
-    for profile in profiles:
-        background.update(profile.counts)
-        background_ngrams += profile.ngrams
+    for item in profiles:
+        background.update(item.counts)
+        background_ngrams += item.ngrams
 
     directed = [
         [
-            _directed_divergence(
-                source, target, background, background_ngrams, weight
-            )
+            _directed_divergence(source, target, background, background_ngrams, weight)
             for target in profiles
         ]
         for source in profiles
@@ -167,15 +166,35 @@ def output_affinity_matrix(
         "background_weight": 1.0 - weight,
         "models": [
             {
-                "label": profile.label,
-                "documents": profile.documents,
-                "characters": profile.characters,
-                "ngrams": profile.ngrams,
-                "entropy_bits": profile.entropy_bits,
+                "label": item.label,
+                "documents": item.documents,
+                "characters": item.characters,
+                "ngrams": item.ngrams,
+                "entropy_bits": item.entropy_bits,
             }
-            for profile in profiles
+            for item in profiles
         ],
         "matrix": matrix,
         "min_divergence": min(pair_values),
         "max_divergence": max(pair_values),
     }
+
+
+class OutputAffinityPlugin:
+    id = "output_affinity"
+    version = "1.0.0"
+    summary = "Symmetric smoothed UTF-16 character n-gram divergence"
+    required_inputs = ("corpora",)
+    limitations = (
+        "style-affinity-only",
+        "not-identity-proof",
+        "not-distillation-proof",
+        "not-capability-proof",
+    )
+
+    def analyze(self, payload: Mapping[str, Any]) -> Mapping[str, Any]:
+        return calculate_output_affinity(
+            _ordered_corpora(payload["corpora"]),
+            ngram_size=payload.get("ngram_size", 3),
+            model_weight=payload.get("model_weight", 0.8),
+        )

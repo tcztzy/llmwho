@@ -23,7 +23,7 @@ That call hooks supported HTTP paths in the current process. It does not add a
 proxy, change a base URL, wrap each client, or send synthetic traffic. Existing
 return values, exceptions, and streaming bodies stay under application control.
 
-> **Alpha honesty:** version 0.2 infers identity from the response body's
+> **Alpha honesty:** version 0.3 infers identity from the response body's
 > declared `model` field. Undocumented model response headers are ignored.
 > This provider-controlled signal can reveal accidental routing changes,
 > but a dishonest provider can forge them. The smoke probe measures endpoint
@@ -31,9 +31,9 @@ return values, exceptions, and streaming bodies stay under application control.
 > classifier. Identity conclusions remain evidence-backed and probabilistic;
 > every result can say `unknown`.
 
-LLMWho also exposes an explicit, offline output-affinity matrix. It compares
-caller-supplied response corpora but is not run by passive hooks and is not an
-identity or distillation classifier.
+LLMWho also exposes a Python science-plugin runtime for explicit analyses such
+as the output-affinity matrix. It is never started by passive hooks and its
+results are not identity or distillation proof.
 
 ## Install
 
@@ -51,7 +51,10 @@ npm install llmwho
 
 The Python package has no required runtime dependencies. If an application has
 HTTPX or requests installed, `init()` instruments them. The Node package hooks
-`globalThis.fetch`, which is built into supported Node versions.
+`globalThis.fetch`, which is built into supported Node versions. Node science
+operations additionally require [uv](https://docs.astral.sh/uv/): the npm SDK
+discovers it and creates a locked Python environment on first explicit science
+call. Import, npm installation, and `init()` never perform that setup.
 
 ## Passive observation
 
@@ -162,7 +165,7 @@ init({ endpoint: "https://gateway.example/internal/ai" });
 | Disable hooks | — | — | `LLMWHO_DISABLED=true` |
 | Content capture | reserved | reserved | `LLMWHO_CAPTURE_CONTENT` reserved |
 
-Raw content capture is deliberately unavailable in 0.2 even if the reserved
+Raw content capture is deliberately unavailable in 0.3 even if the reserved
 option is supplied. This keeps every `ObservationV1` portable and content-free.
 
 ## Explicit active probe
@@ -225,36 +228,58 @@ See [Stability model](docs/STABILITY.md) for the adaptation of continuous
 benchmark systems such as AI Stupid Level, and [Research landscape](docs/RESEARCH.md)
 for the peer-reviewed fingerprinting and API-drift work behind the roadmap.
 
-## Explicit output-affinity matrix
+## Python science plugins
+
+Scientific detectors have one Python implementation and a versioned plugin
+contract. Python discovers installed plugins through the
+`llmwho.science.plugins` entry-point group. Node manages a separate Python
+environment with uv and talks to the same plugins over a local NDJSON worker.
+
+Inspect or prepare the Node runtime explicitly:
+
+```bash
+npx llmwho science status
+npx llmwho science setup
+npx llmwho science plugins
+```
+
+`science.setup()` may download Python and locked dependencies through uv. Use
+`--offline` when only existing Python installations and caches are allowed.
+Executable plugin packages are trusted code and must be configured explicitly;
+reference-profile bundles are data and must not contain executable code. See
+[Science runtime and plugins](docs/SCIENCE_RUNTIME.md).
+
+### Explicit output-affinity matrix
 
 Compare model prose locally with the reproducible, symmetric character-trigram
 divergence used by the recent Typebulb model-style matrix:
 
 ```python
-from llmwho import output_affinity_matrix
+from llmwho import science
 
-report = output_affinity_matrix({
+analysis = science.output_affinity_matrix({
     "reference": ["reference answer one", "reference answer two"],
     "endpoint": ["endpoint answer one", "endpoint answer two"],
 })
-print(report["matrix"][0][1])
+print(analysis["evidence"]["matrix"][0][1])
 ```
 
 ```js
-import { outputAffinityMatrix } from "llmwho";
+import { science } from "llmwho";
 
-const report = outputAffinityMatrix({
+const analysis = await science.outputAffinityMatrix({
   reference: ["reference answer one", "reference answer two"],
   endpoint: ["endpoint answer one", "endpoint answer two"],
 });
-console.log(report.matrix[0][1]);
+console.log(analysis.evidence.matrix[0][1]);
 ```
 
-Lower values mean closer surface style. The function sends and stores nothing;
-the caller explicitly supplies raw outputs, and the report contains only
-derived counts and distances. Similar style is not proof of model identity,
-distillation, or capability transfer. See the exact formula, Typebulb fidelity
-check, experimental controls, and limitations in
+Lower values mean closer surface style. Analysis sends no provider request and
+stores no corpus or observation event; the caller explicitly supplies raw
+outputs, and the report contains only derived counts and distances. Node may
+provision its Python environment before calculation. Similar style is not proof
+of model identity, distillation, or capability transfer. See formula, fidelity
+check, controls, and limitations in
 [Output-affinity matrix](docs/OUTPUT_AFFINITY.md).
 
 ## What is stored
@@ -282,7 +307,7 @@ successful response or the application's original exception.
   well as the model.
 - Passive production workloads change over time and are not a controlled
   benchmark.
-- The 0.2 smoke suite is a compatibility canary, not a broad intelligence score.
+- The 0.3 smoke suite is a compatibility canary, not a broad intelligence score.
 - Output-affinity depends on its prompt set and pooled reference models; it
   measures local writing style, not model provenance.
 
@@ -297,6 +322,7 @@ reference requirements. See [Product vision](docs/VISION.md) and
 uv run --project packages/python --extra test python -m unittest discover -s packages/python/tests -v
 npm install --prefix packages/node
 npm test --prefix packages/node
+LLMWHO_RUN_UV_INTEGRATION=1 npm test --prefix packages/node
 npm run typecheck --prefix packages/node
 npm run build --prefix packages/node
 ```

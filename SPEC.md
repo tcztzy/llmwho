@@ -12,6 +12,9 @@
 - secrets/API keys ∉ events, logs, errors, dashboard
 - active network requests only after explicit user call
 - output-affinity analysis accepts explicit caller-provided corpora only; passive capture/storage unchanged
+- science analysis uses Python plugin runtime; Node discovers `uv` & provisions locked isolated env only after explicit `science.*`/science CLI call
+- `init()`/module import/npm lifecycle scripts ⊥ `uv` discovery, Python setup, child process, download
+- executable science plugins require explicit package configuration; reference profiles remain versioned data, ⊥ executable code
 - identity result probabilistic; uncertainty/`unknown` first-class; ⊥ unsupported certainty claims
 - Python `>=3.10`; Node `>=18`; TypeScript declarations + ESM/CJS outputs
 - optional HTTP libraries remain optional imports
@@ -27,8 +30,11 @@
 - js: `import { init } from "llmwho"; const handle = init()` → idempotent `globalThis.fetch` hook
 - js: `handle.shutdown()` → restore owned fetch hook
 - js: `probe({ baseUrl, apiKey, model, suite: "smoke" })` → `Promise<ProbeReport>`
-- py: `llmwho.output_affinity_matrix(corpora, ngram_size=3, model_weight=0.8)` → JSON-safe style-divergence report
-- js: `outputAffinityMatrix(corpora, { ngramSize: 3, modelWeight: 0.8 })` → JSON-safe style-divergence report
+- py: `llmwho.science.output_affinity_matrix(corpora, ngram_size=3, model_weight=0.8)` → `AnalysisReport`
+- py: `llmwho.science.plugins()` / `llmwho.science.run(plugin_id, payload)` → discovered descriptors / `AnalysisReport`
+- js: `await science.outputAffinityMatrix(corpora, { ngramSize: 3, modelWeight: 0.8 })` → `Promise<AnalysisReport>`
+- js: `ScienceRuntimeManager({uvPath?, cacheDir?, pythonVersion?, offline?, pluginPackages?})`; `.status()` / `.setup()` / `.plugins()` / `.run()` / `.shutdown()`
+- js-cli: `npx llmwho science status|setup|plugins [--offline]`
 - cli: `llmwho summary [--json] [--storage PATH]`
 - cli: `llmwho dashboard [--host 127.0.0.1] [--port 7734] [--storage PATH]`
 - cli: `llmwho probe --base-url URL --model ID [--api-key-env NAME] [--suite smoke]`
@@ -66,6 +72,11 @@ V23: output-affinity metric → normalized UTF-16 character n-grams + pooled-bac
 V24: output-affinity Python/Node reports numerically agree; input corpora ⊥ network, persistence, observation events
 V25: output-affinity report exposes corpus/sample/config metadata; labels result style divergence, ⊥ identity/distillation proof
 V26: documentation contract tests normalize whitespace before semantic-fragment matching; formatting-only line wraps ! fail
+V27: module import/`init()`/npm install → ⊥ `uv` lookup, Python env mutation/download, child process; explicit science operation may provision & reports failure
+V28: Node science env identity → engine version + source hash + lock hash + Python request + plugin set + platform; lives in user cache; frozen sync; concurrent setup serialized; incomplete env ⊥ ready
+V29: science plugin discovery → built-ins + Python `llmwho.science.plugins` entry points; duplicate/invalid plugins rejected; external code only from explicitly configured packages
+V30: output-affinity has one Python implementation behind plugin protocol; Node API async; ⊥ JS numeric fallback/duplicate algorithm; Python/Node result parity exact after transport
+V31: science worker uses versioned NDJSON request/response protocol; raw analysis input ⊥ persistence/observation event/error echo; plugin result includes id/version/evidence/limitations
 
 ## §T TASKS
 id|status|task|cites
@@ -81,6 +92,7 @@ T9|x|create GitHub repo, push source, publish PyPI/npm, tag release, install-ver
 T10|x|implement direct Anthropic Messages adapter, parity/privacy/stream tests, concise README examples|V1,V2,V3,V4,V5,V7,V11,V13,V15,V19,I.anthropic
 T11|x|implement Claude Code/Codex project-hook CLI adapters, safe turn state, configs, parity/fail-open tests, docs|V2,V3,V4,V5,V7,V8,V13,V15,V20,V21,I.agent-hook-cli
 T12|x|implement reproducible output-affinity matrix in Python/Node, public APIs, parity vectors, docs|V3,V5,V6,V12,V13,V23,V24,V25,I.py,I.js
+T13|x|replace dual output-affinity with uv-managed Python science plugin runtime, async Node bridge, CLI, packaging, tests, docs|V3,V5,V13,V15,V17,V18,V23,V25,V27,V28,V29,V30,V31,I.py,I.js,I.js-cli
 
 ## §B BUGS
 id|date|cause|fix

@@ -1,9 +1,9 @@
 """LLMWho Python SDK."""
 
+from . import science
 from .identity import infer_identity
 from .hooks import HookHandle, init
 from .observation import new_observation, validate_observation
-from .output_affinity import output_affinity_matrix
 from .probe import probe
 from .storage import NDJSONStore
 from .summary import quantile, summarize
@@ -16,9 +16,9 @@ __all__ = [
     "infer_identity",
     "init",
     "new_observation",
-    "output_affinity_matrix",
     "probe",
     "quantile",
+    "science",
     "summarize",
     "validate_observation",
 ]
