@@ -54,5 +54,10 @@ same version exists on both registries before creating or updating the GitHub
 Release. npm tarballs are passed as explicit `./dist/*.tgz` filesystem paths so
 the npm CLI cannot parse them as package or GitHub shorthand.
 
+If both registries already contain the version and only the GitHub Release is
+missing, run the same command with both `publish_pypi=false` and
+`publish_npm=false`. Registry verification remains mandatory; no package is
+uploaded again.
+
 Do not move or reuse a release tag. Prepare a new patch version for any change
 after a registry has accepted the release.

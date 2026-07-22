@@ -47,16 +47,6 @@ jobs:
           package-manager-cache: false
       - name: Match tag to package versions
         run: node scripts/check-release-tag.mjs "$RELEASE_TAG"
-      - name: Validate selected registries
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          PUBLISH_PYPI: ${{ inputs.publish_pypi }}
-          PUBLISH_NPM: ${{ inputs.publish_npm }}
-        run: |
-          if [[ "$PUBLISH_PYPI" != "true" && "$PUBLISH_NPM" != "true" ]]; then
-            echo "Select at least one registry for recovery" >&2
-            exit 1
-          fi
       - name: Check repository contracts
         run: python -m unittest tests/test_repository_contract.py -v
 
@@ -228,6 +218,7 @@ jobs:
 
   github-release:
     needs: verify-registries
+    if: always() && needs.verify-registries.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
