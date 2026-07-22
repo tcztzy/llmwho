@@ -11,7 +11,9 @@ trap 'rm -rf "$smoke_dir"' EXIT
   npm install --ignore-scripts "$OLDPWD/$tarball" >/dev/null
   node --input-type=module <<'NODE'
 const llmwho = await import("llmwho");
-if (typeof llmwho.JSONLStore !== "function" || "NDJSONStore" in llmwho) {
+if (typeof llmwho.JSONLStore !== "function"
+    || typeof llmwho.RemoteStore !== "function"
+    || "NDJSONStore" in llmwho) {
   throw new Error("ESM storage exports do not match the release contract");
 }
 const report = await llmwho.science.outputAffinityMatrix({
@@ -25,7 +27,9 @@ await llmwho.science.shutdown();
 NODE
   node <<'NODE'
 const llmwho = require("llmwho");
-if (typeof llmwho.JSONLStore !== "function" || "NDJSONStore" in llmwho) {
+if (typeof llmwho.JSONLStore !== "function"
+    || typeof llmwho.RemoteStore !== "function"
+    || "NDJSONStore" in llmwho) {
   throw new Error("CommonJS storage exports do not match the release contract");
 }
 NODE

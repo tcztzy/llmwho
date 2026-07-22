@@ -1,6 +1,6 @@
 {
   "name": "llmwho",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Passive LLM endpoint identity and stability instrumentation",
   "type": "module",
   "main": "./dist/index.cjs",

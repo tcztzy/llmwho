@@ -3,6 +3,7 @@ import {
   type ProbeReport,
   type AnalysisReport,
   type OutputAffinityReport,
+  RemoteStore,
   ScienceRuntimeManager,
   init,
   probe,
@@ -13,7 +14,15 @@ import {
 const handle = init({
   storagePath: "/tmp/llmwho-events.jsonl",
   endpoint: (url: string) => url.includes("/private/llm"),
+  collectorUrl: "http://127.0.0.1:7734",
+  collectorToken: "token",
+  collectorProtocol: "otlp",
 });
+const remote = new RemoteStore("http://127.0.0.1:7734", {
+  protocol: "native",
+  maxQueue: 10,
+});
+const remoteEvents: Promise<ObservationV1[]> = remote.read(10);
 
 const affinity: Promise<AnalysisReport<OutputAffinityReport>> = science.outputAffinityMatrix(
   new Map([
@@ -42,3 +51,4 @@ async function checkPublicTypes(events: ObservationV1[]): Promise<ProbeReport> {
 void checkPublicTypes;
 void affinity;
 void customScience;
+void remoteEvents;
