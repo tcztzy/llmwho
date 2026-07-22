@@ -4,9 +4,29 @@ on:
   push:
     tags:
       - "v[0-9]*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing immutable release tag to rebuild
+        required: true
+        type: string
+      publish_pypi:
+        description: Publish the tag artifacts to PyPI
+        required: true
+        default: true
+        type: boolean
+      publish_npm:
+        description: Publish the tag artifacts to npm
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
+
+env:
+  RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+  RELEASE_REF: ${{ github.event_name == 'push' && github.ref || format('refs/tags/{0}', inputs.tag) }}
 
 concurrency:
   group: release-${{ github.ref }}
@@ -18,13 +38,25 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_REF }}
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
           package-manager-cache: false
       - name: Match tag to package versions
-        run: node scripts/check-release-tag.mjs "$GITHUB_REF_NAME"
+        run: node scripts/check-release-tag.mjs "$RELEASE_TAG"
+      - name: Validate selected registries
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          PUBLISH_PYPI: ${{ inputs.publish_pypi }}
+          PUBLISH_NPM: ${{ inputs.publish_npm }}
+        run: |
+          if [[ "$PUBLISH_PYPI" != "true" && "$PUBLISH_NPM" != "true" ]]; then
+            echo "Select at least one registry for recovery" >&2
+            exit 1
+          fi
       - name: Check repository contracts
         run: python -m unittest tests/test_repository_contract.py -v
 
@@ -34,6 +66,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_REF }}
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -55,11 +89,11 @@ jobs:
       - name: Smoke-test wheel
         run: >-
           uv run --isolated --no-project --with dist/python/*.whl
-          python scripts/smoke-python-package.py "$GITHUB_REF_NAME"
+          python scripts/smoke-python-package.py "$RELEASE_TAG"
       - name: Smoke-test source distribution
         run: >-
           uv run --isolated --no-project --with dist/python/*.tar.gz
-          python scripts/smoke-python-package.py "$GITHUB_REF_NAME"
+          python scripts/smoke-python-package.py "$RELEASE_TAG"
       - name: Upload Python distributions
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -73,6 +107,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_REF }}
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -115,6 +151,7 @@ jobs:
 
   publish-pypi:
     needs: build-python
+    if: github.event_name == 'push' || inputs.publish_pypi
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -134,6 +171,7 @@ jobs:
 
   publish-npm:
     needs: build-node
+    if: github.event_name == 'push' || inputs.publish_npm
     runs-on: ubuntu-latest
     environment:
       name: npm
@@ -155,10 +193,41 @@ jobs:
       - name: Install npm trusted-publishing client
         run: npm install --global npm@12.0.1
       - name: Publish to npm with OIDC
-        run: npm publish dist/*.tgz --access public
+        run: npm publish ./dist/*.tgz --access public
+
+  verify-registries:
+    needs: [build-python, build-node, publish-pypi, publish-npm]
+    if: >-
+      always() &&
+      needs.build-python.result == 'success' &&
+      needs.build-node.result == 'success' &&
+      (needs.publish-pypi.result == 'success' || needs.publish-pypi.result == 'skipped') &&
+      (needs.publish-npm.result == 'success' || needs.publish-npm.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Verify version on both registries
+        run: |
+          expected="${RELEASE_TAG#v}"
+          for attempt in {1..6}; do
+            pypi_version=$(curl --fail --silent --show-error \
+              "https://pypi.org/pypi/llmwho/$expected/json" \
+              | jq --raw-output '.info.version' || true)
+            npm_version=$(npm view "llmwho@$expected" version 2>/dev/null || true)
+            if [[ "$pypi_version" == "$expected" && "$npm_version" == "$expected" ]]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Expected $expected on PyPI and npm; found PyPI=$pypi_version npm=$npm_version" >&2
+          exit 1
 
   github-release:
-    needs: [publish-pypi, publish-npm]
+    needs: verify-registries
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -178,7 +247,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mapfile -t assets < <(find dist -type f -print | sort)
-          gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
-            --verify-tag \
-            --generate-notes \
-            --title "$GITHUB_REF_NAME"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber
+          else
+            gh release create "$RELEASE_TAG" "${assets[@]}" \
+              --verify-tag \
+              --generate-notes \
+              --title "$RELEASE_TAG"
+          fi
