@@ -99,6 +99,7 @@ T14|x|add pull-request CI and tag-driven OIDC publishing for PyPI/npm/GitHub Rel
 T15|x|make tag release selectively recoverable after partial registry publish; verify both registries before GitHub Release|V17,V18,V32,V33
 T16|x|make registry-verified GitHub Release run after intentionally skipped recovery publish jobs|V32,V33
 T17|x|skip registry publish dry-run when recovery only rebuilds already-published artifacts|V17,V32,V33
+T18|x|pass explicit repository context to isolated GitHub Release job without source checkout|V32,V33
 
 ## §B BUGS
 id|date|cause|fix
@@ -109,3 +110,4 @@ B4|2026-07-22|artifact smoke test assumed `npm pack --prefix` changed package cw
 B5|2026-07-22|npm 12 parsed bare `dist/*.tgz` as GitHub shorthand after PyPI publish succeeded|V33
 B6|2026-07-22|GitHub Actions skip propagation suppressed GitHub Release after intentionally skipped PyPI recovery job|V33
 B7|2026-07-22|npm 12 publish dry-run rejects an already-published version during release-only recovery|V33
+B8|2026-07-22|isolated GitHub Release job lacked `.git` and explicit `gh --repo` context|V33
