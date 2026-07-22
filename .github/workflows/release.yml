@@ -129,7 +129,10 @@ jobs:
         run: |
           mkdir -p "$GITHUB_WORKSPACE/dist/node"
           npm pack --pack-destination "$GITHUB_WORKSPACE/dist/node"
-          npm publish --dry-run --json > /dev/null
+      - name: Validate npm publish
+        if: github.event_name == 'push' || inputs.publish_npm
+        working-directory: packages/node
+        run: npm publish --dry-run --json > /dev/null
       - name: Smoke-test installed Node distribution
         run: scripts/smoke-node-package.sh dist/node/*.tgz
       - name: Upload Node distribution

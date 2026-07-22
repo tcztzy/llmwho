@@ -98,6 +98,7 @@ T13|x|replace dual output-affinity with uv-managed Python science plugin runtime
 T14|x|add pull-request CI and tag-driven OIDC publishing for PyPI/npm/GitHub Releases|V17,V18,V32
 T15|x|make tag release selectively recoverable after partial registry publish; verify both registries before GitHub Release|V17,V18,V32,V33
 T16|x|make registry-verified GitHub Release run after intentionally skipped recovery publish jobs|V32,V33
+T17|x|skip registry publish dry-run when recovery only rebuilds already-published artifacts|V17,V32,V33
 
 ## §B BUGS
 id|date|cause|fix
@@ -107,3 +108,4 @@ B3|2026-07-22|output-affinity doc contract matched raw line wrapping|V26
 B4|2026-07-22|artifact smoke test assumed `npm pack --prefix` changed package cwd|run pack from `packages/node`; no new invariant
 B5|2026-07-22|npm 12 parsed bare `dist/*.tgz` as GitHub shorthand after PyPI publish succeeded|V33
 B6|2026-07-22|GitHub Actions skip propagation suppressed GitHub Release after intentionally skipped PyPI recovery job|V33
+B7|2026-07-22|npm 12 publish dry-run rejects an already-published version during release-only recovery|V33
