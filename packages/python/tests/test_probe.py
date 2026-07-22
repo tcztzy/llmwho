@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
@@ -8,7 +6,7 @@ from threading import Thread
 import unittest
 
 from llmwho import probe
-from llmwho.storage import NDJSONStore
+from llmwho.storage import JSONLStore
 
 
 def answer_for(prompt: str) -> str:
@@ -69,7 +67,7 @@ class ProbeTests(unittest.TestCase):
         thread.start()
         try:
             with TemporaryDirectory() as directory:
-                path = Path(directory) / "events.ndjson"
+                path = Path(directory) / "events.jsonl"
                 report = probe(
                     base_url=f"http://127.0.0.1:{server.server_port}",
                     api_key="probe-secret",
@@ -79,7 +77,7 @@ class ProbeTests(unittest.TestCase):
                 self.assertTrue(report["completed"])
                 self.assertEqual(report["capability"], {"passed": 4, "total": 4, "mean_score": 1.0})
                 self.assertEqual(report["identity"]["statuses"], {"mismatch": 4})
-                events = NDJSONStore(path).read()
+                events = JSONLStore(path).read()
                 self.assertEqual(len(events), 4)
                 self.assertTrue(all(event["source"] == "probe" for event in events))
                 persisted = path.read_text(encoding="utf-8")
@@ -97,7 +95,7 @@ class ProbeTests(unittest.TestCase):
         thread.start()
         try:
             with TemporaryDirectory() as directory:
-                path = Path(directory) / "events.ndjson"
+                path = Path(directory) / "events.jsonl"
                 report = probe(
                     base_url=f"http://127.0.0.1:{server.server_port}",
                     model="client-model",
@@ -105,7 +103,7 @@ class ProbeTests(unittest.TestCase):
                 )
                 self.assertEqual(report["identity"]["statuses"], {"unknown": 4})
                 self.assertEqual(report["identity"]["observed_models"], {})
-                events = NDJSONStore(path).read()
+                events = JSONLStore(path).read()
                 self.assertTrue(all(event["identity"]["evidence"] == [] for event in events))
         finally:
             server.shutdown()

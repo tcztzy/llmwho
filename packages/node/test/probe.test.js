@@ -35,7 +35,7 @@ test("smoke probe is deterministic and content-free", async () => {
     });
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const path = join(tmpdir(), `llmwho-probe-${randomUUID()}.ndjson`);
+  const path = join(tmpdir(), `llmwho-probe-${randomUUID()}.jsonl`);
   try {
     const address = server.address();
     const report = await probe({
@@ -77,7 +77,7 @@ test("V22: undocumented model response headers are ignored", async () => {
     });
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const path = join(tmpdir(), `llmwho-probe-${randomUUID()}.ndjson`);
+  const path = join(tmpdir(), `llmwho-probe-${randomUUID()}.jsonl`);
   try {
     const address = server.address();
     const report = await probe({

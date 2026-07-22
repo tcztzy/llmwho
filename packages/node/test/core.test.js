@@ -6,8 +6,9 @@ import { test } from "node:test";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
+import * as llmwho from "../src/index.js";
 import {
-  NDJSONStore,
+  JSONLStore,
   inferIdentity,
   newObservation,
   quantile,
@@ -17,6 +18,11 @@ import {
 import { endpointFromUrl, redactHeaders, redactText } from "../src/privacy.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+
+test("legacy store name is removed", () => {
+  const legacyName = ["ND", "JSONStore"].join("");
+  assert.equal(Object.hasOwn(llmwho, legacyName), false);
+});
 
 test("shared fixture is accepted", () => {
   const fixture = JSON.parse(readFileSync(join(ROOT, "shared", "fixtures", "observation-v1.json")));
@@ -43,7 +49,7 @@ test("identity abstains without evidence", () => {
 });
 
 test("store rejects raw content and round trips", () => {
-  const path = join(tmpdir(), `llmwho-${randomUUID()}.ndjson`);
+  const path = join(tmpdir(), `llmwho-${randomUUID()}.jsonl`);
   const event = newObservation({
     url: "https://api.example.test/v1/chat/completions?token=hidden",
     durationMs: 25,
@@ -52,7 +58,7 @@ test("store rejects raw content and round trips", () => {
     declaredModel: "model-a",
     request: { operation: "chat.completions", input_bytes: 21 },
   });
-  const store = new NDJSONStore(path);
+  const store = new JSONLStore(path);
   store.append(event);
   assert.deepEqual(store.read(), [event]);
   event.request.messages = [{ content: "secret" }];

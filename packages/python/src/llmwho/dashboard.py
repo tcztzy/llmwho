@@ -1,14 +1,11 @@
 """Dependency-free loopback dashboard server."""
 
-from __future__ import annotations
-
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
-from typing import Optional
 from urllib.parse import parse_qs, urlsplit
 
-from .storage import NDJSONStore
+from .storage import JSONLStore
 from .summary import summarize
 
 
@@ -18,7 +15,7 @@ HTML_PATH = Path(__file__).with_name("dashboard.html")
 class DashboardServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, address: tuple[str, int], store: NDJSONStore) -> None:
+    def __init__(self, address: tuple[str, int], store: JSONLStore) -> None:
         self.store = store
         super().__init__(address, DashboardHandler)
 
@@ -77,18 +74,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
 def create_dashboard_server(
     *,
-    storage_path: Optional[str] = None,
+    storage_path: str | None = None,
     host: str = "127.0.0.1",
     port: int = 7734,
 ) -> DashboardServer:
     if not 0 <= port <= 65535:
         raise ValueError("port must be between 0 and 65535")
-    return DashboardServer((host, port), NDJSONStore(storage_path))
+    return DashboardServer((host, port), JSONLStore(storage_path))
 
 
 def serve_dashboard(
     *,
-    storage_path: Optional[str] = None,
+    storage_path: str | None = None,
     host: str = "127.0.0.1",
     port: int = 7734,
 ) -> None:

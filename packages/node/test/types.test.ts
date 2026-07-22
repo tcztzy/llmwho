@@ -11,7 +11,7 @@ import {
 } from "../src/index.js";
 
 const handle = init({
-  storagePath: "/tmp/llmwho-events.ndjson",
+  storagePath: "/tmp/llmwho-events.jsonl",
   endpoint: (url: string) => url.includes("/private/llm"),
 });
 

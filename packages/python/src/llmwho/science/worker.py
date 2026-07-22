@@ -1,6 +1,4 @@
-"""Versioned NDJSON worker used by the Node science runtime."""
-
-from __future__ import annotations
+"""Versioned JSONL worker used by the Node science runtime."""
 
 from collections.abc import Mapping
 from contextlib import redirect_stderr, redirect_stdout

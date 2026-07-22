@@ -1,19 +1,18 @@
-"""Append-only NDJSON event storage."""
-
-from __future__ import annotations
+"""Append-only JSONL event storage."""
 
 import json
 import os
 from pathlib import Path
 from threading import Lock
-from typing import Any, Iterable, Optional, Union
+from typing import Any
+from collections.abc import Iterable
 
 from .observation import validate_observation
 
 
-class NDJSONStore:
-    def __init__(self, path: Optional[Union[os.PathLike[str], str]] = None) -> None:
-        self.path = Path(path or Path.home() / ".llmwho" / "events.ndjson")
+class JSONLStore:
+    def __init__(self, path: os.PathLike[str] | str | None = None) -> None:
+        self.path = Path(path or Path.home() / ".llmwho" / "events.jsonl")
         self._lock = Lock()
 
     def append(self, event: dict[str, Any]) -> None:
@@ -31,7 +30,7 @@ class NDJSONStore:
             finally:
                 os.close(descriptor)
 
-    def read(self, limit: Optional[int] = None) -> list[dict[str, Any]]:
+    def read(self, limit: int | None = None) -> list[dict[str, Any]]:
         if not self.path.exists():
             return []
         events = []

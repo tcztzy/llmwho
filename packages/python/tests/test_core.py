@@ -1,11 +1,10 @@
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from llmwho import NDJSONStore, infer_identity, new_observation, quantile, summarize
+import llmwho
+from llmwho import JSONLStore, infer_identity, new_observation, quantile, summarize
 from llmwho.observation import validate_observation
 from llmwho.privacy import REDACTED, endpoint_from_url, redact_headers, redact_text
 
@@ -14,6 +13,10 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class CoreTests(unittest.TestCase):
+    def test_legacy_store_name_is_removed(self) -> None:
+        legacy_name = "ND" + "JSONStore"
+        self.assertFalse(hasattr(llmwho, legacy_name))
+
     def test_shared_fixture_is_accepted(self) -> None:
         fixture = json.loads(
             (ROOT / "shared/fixtures/observation-v1.json").read_text(encoding="utf-8")
@@ -61,7 +64,7 @@ class CoreTests(unittest.TestCase):
             request={"operation": "chat.completions", "input_bytes": 21},
         )
         with TemporaryDirectory() as directory:
-            store = NDJSONStore(Path(directory) / "events.ndjson")
+            store = JSONLStore(Path(directory) / "events.jsonl")
             store.append(event)
             self.assertEqual(store.read(), [event])
         event["request"]["messages"] = [{"content": "secret"}]

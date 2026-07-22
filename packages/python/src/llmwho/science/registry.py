@@ -1,7 +1,5 @@
 """Science plugin discovery and execution."""
 
-from __future__ import annotations
-
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from importlib.metadata import entry_points

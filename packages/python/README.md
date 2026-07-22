@@ -29,7 +29,7 @@ client.messages.create(
 
 One call instruments installed HTTPX (sync and async) and requests clients for
 recognized LLM routes. It writes content-free observations to
-`~/.llmwho/events.ndjson`; it never sends active traffic. Calls are idempotent,
+`~/.llmwho/events.jsonl`; it never sends active traffic. Calls are idempotent,
 streaming responses are not consumed, and `handle.shutdown()` safely restores
 only LLMWho-owned patches.
 

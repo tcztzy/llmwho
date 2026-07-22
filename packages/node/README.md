@@ -28,7 +28,7 @@ await client.messages.create({
 ```
 
 One call instruments `globalThis.fetch` for recognized LLM routes. It writes
-content-free observations to `~/.llmwho/events.ndjson`; it never sends active
+content-free observations to `~/.llmwho/events.jsonl`; it never sends active
 traffic. Calls are idempotent, streaming responses are not consumed, and
 `handle.shutdown()` safely restores only the LLMWho-owned hook.
 

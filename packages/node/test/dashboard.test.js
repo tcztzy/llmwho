@@ -4,12 +4,12 @@ import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 
-import { NDJSONStore, newObservation } from "../src/index.js";
+import { JSONLStore, newObservation } from "../src/index.js";
 import { createDashboardServer } from "../src/dashboard.js";
 
 test("dashboard serves shared UI, layered summary, and events", async () => {
-  const path = join(tmpdir(), `llmwho-dashboard-${randomUUID()}.ndjson`);
-  const store = new NDJSONStore(path);
+  const path = join(tmpdir(), `llmwho-dashboard-${randomUUID()}.jsonl`);
+  const store = new JSONLStore(path);
   store.append(newObservation({
     url: "https://api.example/v1/chat/completions",
     durationMs: 15,

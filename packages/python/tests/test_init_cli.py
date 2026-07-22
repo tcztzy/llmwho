@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import io
 import os
 from pathlib import Path
@@ -21,9 +19,9 @@ class InitAndCliTests(unittest.TestCase):
         with TemporaryDirectory() as directory, mock.patch(
             "llmwho.hooks._load_optional", return_value=None
         ) as optional:
-            path = Path(directory) / "events.ndjson"
+            path = Path(directory) / "events.jsonl"
             first = llmwho.init(storage_path=path)
-            second = llmwho.init(storage_path=Path(directory) / "ignored.ndjson")
+            second = llmwho.init(storage_path=Path(directory) / "ignored.jsonl")
             self.assertIs(first, second)
             self.assertEqual(first.store.path, path)
             self.assertFalse(path.exists())
@@ -41,7 +39,7 @@ class InitAndCliTests(unittest.TestCase):
 
     def test_summary_cli_json(self) -> None:
         with TemporaryDirectory() as directory:
-            path = Path(directory) / "missing.ndjson"
+            path = Path(directory) / "missing.jsonl"
             output = io.StringIO()
             with mock.patch("sys.stdout", output):
                 exit_code = main(["summary", "--storage", str(path), "--json"])

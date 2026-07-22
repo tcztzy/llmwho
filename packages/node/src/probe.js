@@ -1,6 +1,6 @@
 import { performance } from "node:perf_hooks";
 import { newObservation } from "./observation.js";
-import { NDJSONStore } from "./storage.js";
+import { JSONLStore } from "./storage.js";
 import { unhookedFetch } from "./hooks.js";
 import { VERSION } from "./version.js";
 
@@ -86,7 +86,7 @@ export async function probe({
   const url = chatUrl(baseUrl);
   const requestFetch = fetchImpl ?? unhookedFetch();
   if (typeof requestFetch !== "function") throw new Error("fetch is unavailable");
-  const store = new NDJSONStore(storagePath);
+  const store = new JSONLStore(storagePath);
   const startedAt = new Date().toISOString();
   const cases = [];
   const events = [];

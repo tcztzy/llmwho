@@ -6,7 +6,7 @@ import {
   isAnthropicMessagesUrl,
 } from "./anthropic.js";
 import { newObservation } from "./observation.js";
-import { NDJSONStore } from "./storage.js";
+import { JSONLStore } from "./storage.js";
 
 const KNOWN_LLM_PATH = /(?:\/chat\/completions|\/completions|\/responses|\/messages|\/api\/chat|\/api\/generate|:generatecontent|:streamgeneratecontent)(?:\/|$)/i;
 const SECRET_QUERY_KEYS = new Set([
@@ -256,7 +256,7 @@ export class HookHandle {
 
 export function init(options = {}) {
   if (activeHandle?.active) return activeHandle;
-  const store = new NDJSONStore(options.storagePath ?? process.env.LLMWHO_STORAGE);
+  const store = new JSONLStore(options.storagePath ?? process.env.LLMWHO_STORAGE);
   const originalFetch = globalThis.fetch;
   const handle = new HookHandle({
     store,

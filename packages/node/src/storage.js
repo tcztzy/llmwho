@@ -3,8 +3,8 @@ import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { validateObservation } from "./observation.js";
 
-export class NDJSONStore {
-  constructor(path = join(homedir(), ".llmwho", "events.ndjson")) {
+export class JSONLStore {
+  constructor(path = join(homedir(), ".llmwho", "events.jsonl")) {
     this.path = path;
   }
 

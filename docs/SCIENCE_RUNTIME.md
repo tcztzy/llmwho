@@ -21,7 +21,7 @@ science operation performs this lifecycle:
    it without relying on a same-version wheel cache;
 7. install explicitly configured plugin packages;
 8. validate plugin discovery and mark the environment ready;
-9. start a reusable Python worker and exchange versioned NDJSON messages.
+9. start a reusable Python worker and exchange versioned JSONL messages.
 
 Concurrent setup is serialized by an exclusive cache lock. An environment is
 ready only when both its Python executable and completion marker match the

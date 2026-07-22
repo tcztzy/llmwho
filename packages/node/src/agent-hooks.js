@@ -10,7 +10,7 @@ import {
 import { dirname, join } from "node:path";
 
 import { newObservation } from "./observation.js";
-import { NDJSONStore } from "./storage.js";
+import { JSONLStore } from "./storage.js";
 
 export const MAX_HOOK_INPUT_BYTES = 8 * 1024 * 1024;
 const CLIENTS = {
@@ -224,7 +224,7 @@ export function runHookCli({ client, expectedEvent, storagePath }) {
         actualEvent = payload.hook_event_name;
         if (enabled()) {
           observeHookEvent(client, payload, {
-            store: new NDJSONStore(storagePath ?? process.env.LLMWHO_STORAGE),
+            store: new JSONLStore(storagePath ?? process.env.LLMWHO_STORAGE),
             expectedEvent,
           });
         }

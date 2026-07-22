@@ -1,7 +1,5 @@
 """Fail-open adapters for Claude Code and Codex lifecycle hooks."""
 
-from __future__ import annotations
-
 import hashlib
 import json
 import math
@@ -10,10 +8,11 @@ from pathlib import Path
 import re
 import sys
 import time
-from typing import Any, Mapping, Optional
+from typing import Any
+from collections.abc import Mapping
 
 from .observation import new_observation
-from .storage import NDJSONStore
+from .storage import JSONLStore
 
 
 MAX_HOOK_INPUT_BYTES = 8 * 1024 * 1024
@@ -48,18 +47,18 @@ def _enabled() -> bool:
     }
 
 
-def _safe_model(value: Any) -> Optional[str]:
+def _safe_model(value: Any) -> str | None:
     return value if isinstance(value, str) and _MODEL.fullmatch(value) else None
 
 
-def _state_path(store: NDJSONStore, client: str, session_id: Any) -> Optional[Path]:
+def _state_path(store: JSONLStore, client: str, session_id: Any) -> Path | None:
     if not isinstance(session_id, str) or not session_id:
         return None
     digest = hashlib.sha256(session_id.encode("utf-8")).hexdigest()
     return store.path.parent / ".hook-state" / client / f"{digest}.json"
 
 
-def _read_state(path: Optional[Path]) -> dict[str, Any]:
+def _read_state(path: Path | None) -> dict[str, Any]:
     if path is None:
         return {}
     try:
@@ -88,7 +87,7 @@ def _read_state(path: Optional[Path]) -> dict[str, Any]:
     return state
 
 
-def _delete_state(path: Optional[Path]) -> None:
+def _delete_state(path: Path | None) -> None:
     if path is None:
         return
     try:
@@ -97,7 +96,7 @@ def _delete_state(path: Optional[Path]) -> None:
         return
 
 
-def _write_state(path: Optional[Path], state: Mapping[str, Any]) -> None:
+def _write_state(path: Path | None, state: Mapping[str, Any]) -> None:
     if path is None:
         return
     safe: dict[str, Any] = {}
@@ -152,10 +151,10 @@ def observe_hook_event(
     client: str,
     payload: Mapping[str, Any],
     *,
-    store: NDJSONStore,
-    expected_event: Optional[str] = None,
-    now_ms: Optional[float] = None,
-) -> Optional[dict[str, Any]]:
+    store: JSONLStore,
+    expected_event: str | None = None,
+    now_ms: float | None = None,
+) -> dict[str, Any] | None:
     """Update safe hook state and append one turn observation when applicable."""
 
     config = CLIENTS.get(client)
@@ -233,7 +232,7 @@ def observe_hook_event(
     return event
 
 
-def _read_stdin() -> Optional[bytes]:
+def _read_stdin() -> bytes | None:
     stream = getattr(sys.stdin, "buffer", sys.stdin)
     value = stream.read(MAX_HOOK_INPUT_BYTES + 1)
     raw = value.encode("utf-8") if isinstance(value, str) else bytes(value)
@@ -244,7 +243,7 @@ def _read_stdin() -> Optional[bytes]:
     return None
 
 
-def _write_protocol_output(client: str, event_name: Optional[str]) -> None:
+def _write_protocol_output(client: str, event_name: str | None) -> None:
     if client == "codex" and event_name in {"Stop", "SubagentStop"}:
         sys.stdout.write("{}\n")
 
@@ -252,8 +251,8 @@ def _write_protocol_output(client: str, event_name: Optional[str]) -> None:
 def run_hook_cli(
     client: str,
     *,
-    expected_event: Optional[str] = None,
-    storage_path: Optional[str] = None,
+    expected_event: str | None = None,
+    storage_path: str | None = None,
 ) -> int:
     """Read one hook payload. Telemetry failure never changes hook control flow."""
 
@@ -269,7 +268,7 @@ def run_hook_cli(
                     observe_hook_event(
                         client,
                         value,
-                        store=NDJSONStore(configured_path),
+                        store=JSONLStore(configured_path),
                         expected_event=expected_event,
                     )
     except Exception:

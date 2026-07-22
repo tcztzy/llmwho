@@ -1,12 +1,10 @@
 """LLMWho command-line interface."""
 
-from __future__ import annotations
-
 import argparse
 import json
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
-from .storage import NDJSONStore
+from .storage import JSONLStore
 from .summary import summarize
 from .version import __version__
 
@@ -17,7 +15,7 @@ def _parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
 
     summary = commands.add_parser("summary", help="summarize locally stored observations")
-    summary.add_argument("--storage", help="NDJSON event path")
+    summary.add_argument("--storage", help="JSONL event path")
     summary.add_argument("--json", action="store_true", help="print machine-readable JSON")
 
     dashboard = commands.add_parser("dashboard", help="start the local dashboard")
@@ -53,10 +51,10 @@ def _print_summary(report: dict, as_json: bool) -> None:
     print(f"capability probes: {report['capability']['probe_count']}")
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "summary":
-        _print_summary(summarize(NDJSONStore(args.storage).read()), args.json)
+        _print_summary(summarize(JSONLStore(args.storage).read()), args.json)
         return 0
     if args.command == "dashboard":
         from .dashboard import serve_dashboard

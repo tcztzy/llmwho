@@ -1,7 +1,5 @@
 """One-call passive instrumentation for optional Python HTTP clients."""
 
-from __future__ import annotations
-
 import importlib
 import importlib.util
 import json
@@ -10,7 +8,8 @@ import re
 from dataclasses import dataclass, field
 from threading import RLock
 from time import perf_counter
-from typing import Any, Callable, Mapping, Optional
+from typing import Any
+from collections.abc import Callable, Mapping
 from urllib.parse import parse_qsl, urlsplit
 
 from .anthropic import (
@@ -21,10 +20,10 @@ from .anthropic import (
 )
 from .observation import new_observation
 from .privacy import SENSITIVE_HEADERS
-from .storage import NDJSONStore
+from .storage import JSONLStore
 
 
-EndpointMatcher = Optional[Callable[[str], bool] | str]
+EndpointMatcher = Callable[[str], bool] | str | None
 
 _KNOWN_LLM_PATH = re.compile(
     r"(?:/chat/completions|/completions|/responses|/messages|"
@@ -32,7 +31,7 @@ _KNOWN_LLM_PATH = re.compile(
     re.IGNORECASE,
 )
 _STATE_LOCK = RLock()
-_ACTIVE_HANDLE: Optional["HookHandle"] = None
+_ACTIVE_HANDLE: "HookHandle | None" = None
 
 
 def _environment_enabled() -> bool:
@@ -69,7 +68,7 @@ def _redaction_count(url: str, headers: Mapping[str, Any]) -> int:
     return count
 
 
-def _json_mapping(body: Any) -> tuple[Optional[dict[str, Any]], int]:
+def _json_mapping(body: Any) -> tuple[dict[str, Any] | None, int]:
     if body is None:
         return None, 0
     if isinstance(body, str):
@@ -86,7 +85,7 @@ def _json_mapping(body: Any) -> tuple[Optional[dict[str, Any]], int]:
     return (value if isinstance(value, dict) else None), size
 
 
-def _request_metadata(payload: Optional[Mapping[str, Any]], size: int, path: str) -> tuple[dict, Optional[str]]:
+def _request_metadata(payload: Mapping[str, Any] | None, size: int, path: str) -> tuple[dict, str | None]:
     metadata: dict[str, Any] = {"operation": _operation(path), "input_bytes": size}
     claimed = None
     if payload:
@@ -101,7 +100,7 @@ def _request_metadata(payload: Optional[Mapping[str, Any]], size: int, path: str
     return metadata, claimed
 
 
-def _response_metadata(payload: Optional[Mapping[str, Any]], size: int, status_code: int) -> tuple[dict, Optional[str]]:
+def _response_metadata(payload: Mapping[str, Any] | None, size: int, status_code: int) -> tuple[dict, str | None]:
     metadata: dict[str, Any] = {"status_code": status_code, "output_bytes": size}
     declared = None
     if payload:
@@ -130,8 +129,8 @@ def _response_metadata(payload: Optional[Mapping[str, Any]], size: int, status_c
 
 
 def _normalized_request_metadata(
-    url: str, payload: Optional[Mapping[str, Any]], size: int
-) -> tuple[dict[str, Any], Optional[str], Optional[str]]:
+    url: str, payload: Mapping[str, Any] | None, size: int
+) -> tuple[dict[str, Any], str | None, str | None]:
     if is_anthropic_messages_url(url):
         metadata, claimed = anthropic_request_metadata(payload, size)
         return metadata, claimed, ANTHROPIC_PROVIDER
@@ -140,11 +139,11 @@ def _normalized_request_metadata(
 
 
 def _normalized_response_metadata(
-    provider: Optional[str],
-    payload: Optional[Mapping[str, Any]],
+    provider: str | None,
+    payload: Mapping[str, Any] | None,
     size: int,
     status_code: int,
-) -> tuple[dict[str, Any], Optional[str]]:
+) -> tuple[dict[str, Any], str | None]:
     if provider == ANTHROPIC_PROVIDER:
         return anthropic_response_metadata(payload, size, status_code)
     return _response_metadata(payload, size, status_code)
@@ -178,7 +177,7 @@ def _exception_outcome(error: Exception) -> str:
 
 @dataclass
 class HookHandle:
-    store: NDJSONStore
+    store: JSONLStore
     endpoint: EndpointMatcher = None
     capture_content: bool = False
     _patches: list[tuple[Any, str, Any, Any]] = field(default_factory=list)
@@ -210,14 +209,14 @@ class HookHandle:
                 _ACTIVE_HANDLE = None
 
 
-def _httpx_body(request: Any) -> tuple[Optional[dict[str, Any]], int]:
+def _httpx_body(request: Any) -> tuple[dict[str, Any] | None, int]:
     try:
         return _json_mapping(request.content)
     except Exception:
         return None, 0
 
 
-def _httpx_response_body(response: Any) -> tuple[Optional[dict[str, Any]], int]:
+def _httpx_response_body(response: Any) -> tuple[dict[str, Any] | None, int]:
     try:
         if not response.is_stream_consumed:
             return None, 0
@@ -365,7 +364,7 @@ def _install_requests(handle: HookHandle, module: Any) -> None:
     handle._patch(module.sessions.Session, "send", send)
 
 
-def _load_optional(name: str) -> Optional[Any]:
+def _load_optional(name: str) -> Any | None:
     try:
         if importlib.util.find_spec(name) is None:
             return None
@@ -376,7 +375,7 @@ def _load_optional(name: str) -> Optional[Any]:
 
 def init(
     *,
-    storage_path: Optional[os.PathLike[str] | str] = None,
+    storage_path: os.PathLike[str] | str | None = None,
     capture_content: bool = False,
     endpoint: EndpointMatcher = None,
 ) -> HookHandle:
@@ -393,7 +392,7 @@ def init(
             return _ACTIVE_HANDLE
         configured_path = storage_path or os.environ.get("LLMWHO_STORAGE")
         handle = HookHandle(
-            store=NDJSONStore(configured_path),
+            store=JSONLStore(configured_path),
             endpoint=endpoint,
             capture_content=False,
             active=_environment_enabled(),

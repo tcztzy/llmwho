@@ -1,4 +1,4 @@
-import { NDJSONStore } from "./storage.js";
+import { JSONLStore } from "./storage.js";
 import { summarize } from "./summary.js";
 import { VERSION } from "./version.js";
 import { ScienceRuntimeManager } from "./science-runtime.js";
@@ -40,7 +40,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   }
   const [command] = argv;
   if (command === "summary") {
-    const store = new NDJSONStore(option(argv, "--storage", undefined));
+    const store = new JSONLStore(option(argv, "--storage", undefined));
     printSummary(summarize(store.read()), argv.includes("--json"));
     return 0;
   }

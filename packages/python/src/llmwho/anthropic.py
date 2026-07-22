@@ -1,8 +1,7 @@
 """Content-free normalization for direct Anthropic Messages API traffic."""
 
-from __future__ import annotations
-
-from typing import Any, Mapping, Optional
+from typing import Any
+from collections.abc import Mapping
 from urllib.parse import urlsplit
 
 
@@ -23,13 +22,13 @@ def is_messages_url(url: str) -> bool:
         return False
 
 
-def _token(value: Any) -> Optional[int]:
+def _token(value: Any) -> int | None:
     return value if type(value) is int and value >= 0 else None
 
 
 def request_metadata(
-    payload: Optional[Mapping[str, Any]], size: int
-) -> tuple[dict[str, Any], Optional[str]]:
+    payload: Mapping[str, Any] | None, size: int
+) -> tuple[dict[str, Any], str | None]:
     """Normalize safe request metadata without retaining message content."""
 
     metadata: dict[str, Any] = {
@@ -52,8 +51,8 @@ def request_metadata(
 
 
 def response_metadata(
-    payload: Optional[Mapping[str, Any]], size: int, status_code: int
-) -> tuple[dict[str, Any], Optional[str]]:
+    payload: Mapping[str, Any] | None, size: int, status_code: int
+) -> tuple[dict[str, Any], str | None]:
     """Normalize safe response metadata and Anthropic token accounting."""
 
     metadata: dict[str, Any] = {

@@ -2,7 +2,7 @@
 
 ## MVP
 
-- Shared observation schema and local NDJSON storage.
+- Shared observation schema and local JSONL storage.
 - Python hooks for `requests` and `httpx`.
 - Node hook for `globalThis.fetch`.
 - OpenAI-compatible passive response parsing.

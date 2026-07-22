@@ -17,7 +17,7 @@ import {
   MAX_HOOK_INPUT_BYTES,
   observeHookEvent,
 } from "../src/agent-hooks.js";
-import { NDJSONStore } from "../src/storage.js";
+import { JSONLStore } from "../src/storage.js";
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
 const cliPath = join(testDirectory, "../src/cli.js");
@@ -78,7 +78,7 @@ function assertExpected(event, expected) {
 test("shared hook sequences normalize turns without persisting content", () => {
   for (const client of ["claude-code", "codex"]) {
     const root = testRoot();
-    const store = new NDJSONStore(join(root, "events.ndjson"));
+    const store = new JSONLStore(join(root, "events.jsonl"));
     const expectedEvents = [];
     for (const step of fixture[client]) {
       const event = observeHookEvent(client, step.payload, {
@@ -124,7 +124,7 @@ function runCli(client, eventName, payload, storage, { disabled = false } = {}) 
 
 test("hook CLI correlates processes and preserves Claude/Codex output protocols", () => {
   const root = testRoot();
-  const claudeStorage = join(root, "claude.ndjson");
+  const claudeStorage = join(root, "claude.jsonl");
   const claudePayloads = [
     {
       session_id: "cross-process-session",
@@ -153,14 +153,14 @@ test("hook CLI correlates processes and preserves Claude/Codex output protocols"
     assert.equal(result.stdout, "");
     assert.equal(result.stderr, "");
   }
-  const claudeEvent = new NDJSONStore(claudeStorage).read()[0];
+  const claudeEvent = new JSONLStore(claudeStorage).read()[0];
   assert.equal(claudeEvent.endpoint.provider, "anthropic");
   assert.equal(claudeEvent.request.claimed_model, "claude-sonnet-5");
   const claudePersisted = readFileSync(claudeStorage, "utf8");
   assert.equal(claudePersisted.includes("cross-process-session"), false);
   assert.equal(claudePersisted.includes("do not persist"), false);
 
-  const codexStorage = join(root, "codex.ndjson");
+  const codexStorage = join(root, "codex.jsonl");
   const codexPayloads = [
     {
       session_id: "codex-cross-process",
@@ -187,14 +187,14 @@ test("hook CLI correlates processes and preserves Claude/Codex output protocols"
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout, payload.hook_event_name === "Stop" ? "{}\n" : "");
   }
-  const codexEvent = new NDJSONStore(codexStorage).read()[0];
+  const codexEvent = new JSONLStore(codexStorage).read()[0];
   assert.equal(codexEvent.endpoint.provider, "openai");
   assert.equal(readFileSync(codexStorage, "utf8").includes("private codex"), false);
 });
 
 test("hook CLI stays fail-open for malformed input, storage failure, and disable", () => {
   const root = testRoot();
-  const malformedStorage = join(root, "malformed.ndjson");
+  const malformedStorage = join(root, "malformed.jsonl");
   const malformed = runCli("codex", "Stop", "{not-json", malformedStorage);
   assert.equal(malformed.status, 0);
   assert.equal(malformed.stdout, "{}\n");
@@ -207,12 +207,12 @@ test("hook CLI stays fail-open for malformed input, storage failure, and disable
     session_id: "secret",
     hook_event_name: "Stop",
     model: "gpt-5.3-codex",
-  }), join(blocker, "events.ndjson"));
+  }), join(blocker, "events.jsonl"));
   assert.equal(failure.status, 0);
   assert.equal(failure.stdout, "{}\n");
   assert.equal(failure.stderr, "");
 
-  const disabledStorage = join(root, "disabled.ndjson");
+  const disabledStorage = join(root, "disabled.jsonl");
   const disabled = runCli("codex", "Stop", JSON.stringify({
     session_id: "secret",
     hook_event_name: "Stop",
@@ -222,7 +222,7 @@ test("hook CLI stays fail-open for malformed input, storage failure, and disable
   assert.equal(disabled.stdout, "{}\n");
   assert.equal(existsSync(disabledStorage), false);
 
-  const oversizedStorage = join(root, "oversized.ndjson");
+  const oversizedStorage = join(root, "oversized.jsonl");
   const oversized = runCli(
     "codex",
     "Stop",
@@ -237,7 +237,7 @@ test("hook CLI stays fail-open for malformed input, storage failure, and disable
 
 test("hook state rejects unsafe model values", () => {
   const root = testRoot();
-  const store = new NDJSONStore(join(root, "events.ndjson"));
+  const store = new JSONLStore(join(root, "events.jsonl"));
   const event = observeHookEvent("claude-code", {
     session_id: "unsafe-model-session",
     hook_event_name: "UserPromptSubmit",

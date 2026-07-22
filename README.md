@@ -141,7 +141,7 @@ not run them by hand. Copy or merge the ready-made
 [Agent hook setup, privacy, and limits](docs/AGENT_HOOKS.md).
 
 Repeated `init()` calls return the same active handle; they do not stack hook
-layers. By default, events are appended to `~/.llmwho/events.ndjson`.
+layers. By default, events are appended to `~/.llmwho/events.jsonl`.
 
 Recognized routes include OpenAI-compatible chat/completions/responses,
 Anthropic-shaped `/messages`, Gemini `:generateContent`, and Ollama
@@ -233,7 +233,7 @@ for the peer-reviewed fingerprinting and API-drift work behind the roadmap.
 Scientific detectors have one Python implementation and a versioned plugin
 contract. Python discovers installed plugins through the
 `llmwho.science.plugins` entry-point group. Node manages a separate Python
-environment with uv and talks to the same plugins over a local NDJSON worker.
+environment with uv and talks to the same plugins over a local JSONL worker.
 
 Inspect or prepare the Node runtime explicitly:
 
@@ -319,6 +319,9 @@ reference requirements. See [Product vision](docs/VISION.md) and
 ## Development
 
 ```bash
+pre-commit install
+pre-commit run --all-files
+ruff check --config packages/python/pyproject.toml .
 uv run --project packages/python --extra test python -m unittest discover -s packages/python/tests -v
 npm install --prefix packages/node
 npm test --prefix packages/node
@@ -329,4 +332,5 @@ npm run build --prefix packages/node
 
 The repository is an MIT-licensed monorepo. Public behavior is defined in
 [`SPEC.md`](SPEC.md); contributions should update tests and documentation with
-the implementation.
+the implementation. Maintainers publish immutable, tag-matched artifacts using
+the tokenless GitHub Actions process in [Releasing LLMWho](docs/RELEASING.md).

@@ -46,8 +46,8 @@ absolute executable path. For a project-local Node install, use the absolute
 path to `node_modules/.bin/llmwho`; Codex may start from a subdirectory, so a
 plain relative path is not reliable.
 
-Set a custom event file with `LLMWHO_STORAGE=/path/events.ndjson` or append
-`--storage /path/events.ndjson` to every command. Set `LLMWHO_DISABLED=true` to
+Set a custom event file with `LLMWHO_STORAGE=/path/events.jsonl` or append
+`--storage /path/events.jsonl` to every command. Set `LLMWHO_DISABLED=true` to
 disable recording without editing hook configuration.
 
 ## What is observed
@@ -64,7 +64,7 @@ disable recording without editing hook configuration.
 | Identity | claimed model with `unknown` status | claimed model with `unknown` status |
 
 Hook invocations are separate processes. LLMWho correlates them with a small
-state file next to the NDJSON store under `.hook-state/`. The filename is a
+state file next to the JSONL store under `.hook-state/`. The filename is a
 SHA-256 digest of the session ID. File content is restricted to a validated
 model slug, turn start time, and prompt byte count. Claude state is removed by
 `SessionEnd`; Codex state is removed by `Stop`.

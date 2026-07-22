@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { main } from "../src/cli.js";
 
 test("summary CLI emits JSON for an empty store", async () => {
-  const path = join(tmpdir(), `llmwho-cli-${randomUUID()}.ndjson`);
+  const path = join(tmpdir(), `llmwho-cli-${randomUUID()}.jsonl`);
   let output = "";
   const originalWrite = process.stdout.write;
   process.stdout.write = (chunk) => { output += String(chunk); return true; };

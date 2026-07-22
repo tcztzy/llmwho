@@ -1,13 +1,8 @@
 """Conservative identity inference from provider-declared metadata."""
 
-from __future__ import annotations
-
-from typing import Optional
-
-
 def infer_identity(
-    claimed_model: Optional[str] = None,
-    declared_model: Optional[str] = None,
+    claimed_model: str | None = None,
+    declared_model: str | None = None,
 ) -> dict:
     """Build an evidence ledger from the response-declared model."""
 

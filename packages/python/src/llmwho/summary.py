@@ -1,12 +1,10 @@
 """Deterministic, layered endpoint summaries."""
 
-from __future__ import annotations
-
 from collections import Counter
-from typing import Iterable, Optional, Sequence
+from collections.abc import Iterable, Sequence
 
 
-def quantile(values: Sequence[float], probability: float) -> Optional[float]:
+def quantile(values: Sequence[float], probability: float) -> float | None:
     """R type-7 linear quantile, with identical behavior in the Node SDK."""
 
     if not values:

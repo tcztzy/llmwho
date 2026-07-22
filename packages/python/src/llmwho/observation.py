@@ -1,9 +1,8 @@
 """ObservationV1 construction and lightweight runtime validation."""
 
-from __future__ import annotations
-
 from datetime import datetime, timezone
-from typing import Any, Mapping, Optional
+from typing import Any
+from collections.abc import Mapping
 from uuid import uuid4
 
 from .identity import infer_identity
@@ -22,15 +21,15 @@ def new_observation(
     url: str,
     duration_ms: float,
     outcome: str,
-    error_type: Optional[str] = None,
+    error_type: str | None = None,
     source: str = "passive",
     modality: str = "text",
-    provider: Optional[str] = None,
-    claimed_model: Optional[str] = None,
-    declared_model: Optional[str] = None,
-    request: Optional[Mapping[str, Any]] = None,
-    response: Optional[Mapping[str, Any]] = None,
-    probe: Optional[Mapping[str, Any]] = None,
+    provider: str | None = None,
+    claimed_model: str | None = None,
+    declared_model: str | None = None,
+    request: Mapping[str, Any] | None = None,
+    response: Mapping[str, Any] | None = None,
+    probe: Mapping[str, Any] | None = None,
     redactions: int = 0,
 ) -> dict[str, Any]:
     event: dict[str, Any] = {

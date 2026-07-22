@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import re
 import unittest
 
 
@@ -173,6 +174,87 @@ class RepositoryContractTests(unittest.TestCase):
             self.assertIn(phrase, runtime)
         self.assertFalse((ROOT / "packages/node/src/output-affinity.js").exists())
         self.assertFalse((ROOT / "packages/python/src/llmwho/output_affinity.py").exists())
+
+    def test_python_style_gate_bans_deferred_annotations(self) -> None:
+        project = (ROOT / "packages/python/pyproject.toml").read_text(encoding="utf-8")
+        pre_commit = (ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
+
+        self.assertIn('select = ["UP", "TID"]', project)
+        self.assertIn('"__future__.annotations"', project)
+        self.assertIn("astral-sh/ruff-pre-commit", pre_commit)
+        self.assertIn("id: ruff-check", pre_commit)
+        self.assertIn("args: [--config, packages/python/pyproject.toml]", pre_commit)
+
+        roots = (
+            ROOT / "packages/python/src",
+            ROOT / "packages/python/tests",
+            ROOT / "tests",
+        )
+        forbidden = "from __future__ import " + "annotations"
+        for root in roots:
+            for path in root.rglob("*.py"):
+                self.assertNotIn(
+                    forbidden,
+                    path.read_text(encoding="utf-8"),
+                    str(path.relative_to(ROOT)),
+                )
+
+    def test_jsonl_is_the_only_line_delimited_json_name(self) -> None:
+        forbidden_name = "ND" + "JSON"
+        forbidden_suffix = ".nd" + "json"
+        roots = (
+            ROOT / "docs",
+            ROOT / "packages/node/src",
+            ROOT / "packages/node/test",
+            ROOT / "packages/python/src",
+            ROOT / "packages/python/tests",
+        )
+        paths = [
+            ROOT / "README.md",
+            ROOT / "SPEC.md",
+            ROOT / "packages/node/README.md",
+            ROOT / "packages/python/README.md",
+        ]
+        for root in roots:
+            paths.extend(
+                path
+                for path in root.rglob("*")
+                if path.suffix in {".js", ".md", ".py", ".ts"}
+            )
+
+        for path in paths:
+            text = path.read_text(encoding="utf-8")
+            self.assertNotIn(forbidden_name, text, str(path.relative_to(ROOT)))
+            self.assertNotIn(forbidden_suffix, text, str(path.relative_to(ROOT)))
+
+    def test_release_workflow_uses_oidc_and_immutable_actions(self) -> None:
+        ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        release = (ROOT / ".github/workflows/release.yml").read_text(
+            encoding="utf-8"
+        )
+        guide = (ROOT / "docs/RELEASING.md").read_text(encoding="utf-8")
+
+        self.assertIn("branches: [main]", ci)
+        self.assertNotIn("id-token: write", ci)
+        self.assertIn('tags:\n      - "v[0-9]*"', release)
+        self.assertEqual(release.count("id-token: write"), 2)
+        self.assertIn("name: pypi", release)
+        self.assertIn("name: npm", release)
+        self.assertIn("needs: [publish-pypi, publish-npm]", release)
+        self.assertNotIn("secrets.", release)
+        self.assertNotIn("NODE_AUTH_TOKEN", release)
+        for workflow in (ci, release):
+            for action in re.findall(r"uses: [^@\s]+@([^\s]+)", workflow):
+                self.assertRegex(action, r"^[0-9a-f]{40}$")
+
+        for phrase in (
+            "No PyPI or npm token belongs in GitHub secrets",
+            "release.yml",
+            "`pypi`",
+            "`npm`",
+            "rerun only the failed job",
+        ):
+            self.assertIn(phrase, guide)
 
 
 if __name__ == "__main__":

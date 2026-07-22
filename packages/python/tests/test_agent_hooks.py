@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 import os
 from pathlib import Path
@@ -9,7 +7,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from llmwho.agent_hooks import MAX_HOOK_INPUT_BYTES, observe_hook_event
-from llmwho.storage import NDJSONStore
+from llmwho.storage import JSONLStore
 
 
 FIXTURE_PATH = (
@@ -57,7 +55,7 @@ class AgentHookTests(unittest.TestCase):
     def test_shared_sequences_normalize_turns_without_persisting_content(self) -> None:
         for client in ("claude-code", "codex"):
             with self.subTest(client=client), TemporaryDirectory() as directory:
-                store = NDJSONStore(Path(directory) / "events.ndjson")
+                store = JSONLStore(Path(directory) / "events.jsonl")
                 expected_events = []
                 for step in self.fixture[client]:
                     event = observe_hook_event(
@@ -128,7 +126,7 @@ class AgentHookTests(unittest.TestCase):
 
     def test_cli_correlates_separate_processes_and_preserves_protocol_output(self) -> None:
         with TemporaryDirectory() as directory:
-            storage = Path(directory) / "claude.ndjson"
+            storage = Path(directory) / "claude.jsonl"
             payloads = (
                 {
                     "session_id": "cross-process-session",
@@ -157,14 +155,14 @@ class AgentHookTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout, "")
                 self.assertEqual(result.stderr, "")
-            event = NDJSONStore(storage).read()[0]
+            event = JSONLStore(storage).read()[0]
             self.assertEqual(event["endpoint"]["provider"], "anthropic")
             self.assertEqual(event["request"]["claimed_model"], "claude-sonnet-5")
             persisted = storage.read_text(encoding="utf-8")
             self.assertNotIn("cross-process-session", persisted)
             self.assertNotIn("do not persist", persisted)
 
-            codex_storage = Path(directory) / "codex.ndjson"
+            codex_storage = Path(directory) / "codex.jsonl"
             codex_payloads = (
                 {
                     "session_id": "codex-cross-process",
@@ -191,14 +189,14 @@ class AgentHookTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 expected_stdout = "{}\n" if payload["hook_event_name"] == "Stop" else ""
                 self.assertEqual(result.stdout, expected_stdout)
-            codex_event = NDJSONStore(codex_storage).read()[0]
+            codex_event = JSONLStore(codex_storage).read()[0]
             self.assertEqual(codex_event["endpoint"]["provider"], "openai")
             self.assertNotIn("private codex", codex_storage.read_text())
 
     def test_cli_is_fail_open_for_bad_input_storage_failure_and_disable(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)
-            malformed_storage = root / "malformed.ndjson"
+            malformed_storage = root / "malformed.jsonl"
             malformed = self._run_cli(
                 "codex", "Stop", "{not-json", malformed_storage
             )
@@ -219,13 +217,13 @@ class AgentHookTests(unittest.TestCase):
                         "model": "gpt-5.3-codex",
                     }
                 ),
-                blocker / "events.ndjson",
+                blocker / "events.jsonl",
             )
             self.assertEqual(failure.returncode, 0)
             self.assertEqual(failure.stdout, "{}\n")
             self.assertEqual(failure.stderr, "")
 
-            disabled_storage = root / "disabled.ndjson"
+            disabled_storage = root / "disabled.jsonl"
             disabled = self._run_cli(
                 "codex",
                 "Stop",
@@ -243,7 +241,7 @@ class AgentHookTests(unittest.TestCase):
             self.assertEqual(disabled.stdout, "{}\n")
             self.assertFalse(disabled_storage.exists())
 
-            oversized_storage = root / "oversized.ndjson"
+            oversized_storage = root / "oversized.jsonl"
             oversized = self._run_cli(
                 "codex",
                 "Stop",
@@ -257,7 +255,7 @@ class AgentHookTests(unittest.TestCase):
 
     def test_state_rejects_unsafe_model_values(self) -> None:
         with TemporaryDirectory() as directory:
-            store = NDJSONStore(Path(directory) / "events.ndjson")
+            store = JSONLStore(Path(directory) / "events.jsonl")
             event = observe_hook_event(
                 "claude-code",
                 {

@@ -29,7 +29,7 @@ export interface InitOptions {
   endpoint?: string | ((url: string) => boolean);
 }
 export class HookHandle {
-  readonly store: NDJSONStore;
+  readonly store: JSONLStore;
   readonly endpoint?: InitOptions["endpoint"];
   readonly captureContent: false;
   active: boolean;
@@ -141,7 +141,7 @@ export class ScienceRuntimeManager {
   shutdown(): Promise<void>;
 }
 export const science: ScienceRuntimeManager;
-export class NDJSONStore {
+export class JSONLStore {
   constructor(path?: string);
   path: string;
   append(event: ObservationV1): void;

@@ -39,7 +39,7 @@
 - cli: `llmwho dashboard [--host 127.0.0.1] [--port 7734] [--storage PATH]`
 - cli: `llmwho probe --base-url URL --model ID [--api-key-env NAME] [--suite smoke]`
 - js-cli: `npx llmwho summary|dashboard|probe ...`
-- event: NDJSON `ObservationV1` with `schema_version="1"`, timestamp, SDK, endpoint, transport, identity, behavior, privacy fields
+- event: JSONL `ObservationV1` with `schema_version="1"`, timestamp, SDK, endpoint, transport, identity, behavior, privacy fields
 - anthropic: passive py/js hooks recognize direct `POST /v1/messages`; normalize `endpoint.provider="anthropic"`, `request.operation="messages"`, claimed model, stream, role count, byte counts, declared model, status, and input/output/total token usage; stream body ⊥ read/clone
 - agent-hook-cli: `llmwho hook claude-code|codex [--event EVENT] [--storage PATH]` reads one official lifecycle-hook JSON object from stdin; project `.claude/settings.json` / `.codex/hooks.json` configs emit content-free passive turn observations
 - dashboard: local `GET /`, `GET /api/summary`, `GET /api/events`
@@ -76,13 +76,14 @@ V27: module import/`init()`/npm install → ⊥ `uv` lookup, Python env mutation
 V28: Node science env identity → engine version + source hash + lock hash + Python request + plugin set + platform; lives in user cache; frozen sync; concurrent setup serialized; incomplete env ⊥ ready
 V29: science plugin discovery → built-ins + Python `llmwho.science.plugins` entry points; duplicate/invalid plugins rejected; external code only from explicitly configured packages
 V30: output-affinity has one Python implementation behind plugin protocol; Node API async; ⊥ JS numeric fallback/duplicate algorithm; Python/Node result parity exact after transport
-V31: science worker uses versioned NDJSON request/response protocol; raw analysis input ⊥ persistence/observation event/error echo; plugin result includes id/version/evidence/limitations
+V31: science worker uses versioned JSONL request/response protocol; raw analysis input ⊥ persistence/observation event/error echo; plugin result includes id/version/evidence/limitations
+V32: release tag = `v` + Python/npm/module version; CI tests/builds/smoke-installs immutable artifacts before separate PyPI/npm OIDC environment jobs; registry token ⊥ GitHub secrets; GitHub Release only after both registry publishes succeed
 
 ## §T TASKS
 id|status|task|cites
 T1|x|scaffold monorepo, vision, license, contributor metadata|V3,V5,V6,V9,V16
 T2|x|research black-box LLM fingerprinting, attribution, provenance, drift, reliability; write cited synthesis|V6,V16
-T3|x|define shared `ObservationV1`, privacy/redaction, NDJSON storage, identity evidence, summary math|V2,V3,V6,V7,V8,V10
+T3|x|define shared `ObservationV1`, privacy/redaction, JSONL storage, identity evidence, summary math|V2,V3,V6,V7,V8,V10
 T4|x|implement Python `init()` hooks, API, CLI, tests|V1,V2,V3,V4,V5,V11,V15,I.py
 T5|x|implement npm `init()` fetch hook, API, CLI, tests|V1,V2,V3,V4,V5,V7,V11,I.js
 T6|x|implement deterministic active smoke probe & report in Python/JS|V5,V6,V8,V12,V13,I.py,I.js
@@ -93,6 +94,7 @@ T10|x|implement direct Anthropic Messages adapter, parity/privacy/stream tests, 
 T11|x|implement Claude Code/Codex project-hook CLI adapters, safe turn state, configs, parity/fail-open tests, docs|V2,V3,V4,V5,V7,V8,V13,V15,V20,V21,I.agent-hook-cli
 T12|x|implement reproducible output-affinity matrix in Python/Node, public APIs, parity vectors, docs|V3,V5,V6,V12,V13,V23,V24,V25,I.py,I.js
 T13|x|replace dual output-affinity with uv-managed Python science plugin runtime, async Node bridge, CLI, packaging, tests, docs|V3,V5,V13,V15,V17,V18,V23,V25,V27,V28,V29,V30,V31,I.py,I.js,I.js-cli
+T14|x|add pull-request CI and tag-driven OIDC publishing for PyPI/npm/GitHub Releases|V17,V18,V32
 
 ## §B BUGS
 id|date|cause|fix

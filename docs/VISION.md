@@ -99,7 +99,7 @@ never recorded. Derived features should be calculated in-process before raw
 content is discarded. Telemetry failures must never break the host request.
 
 The MVP is local-first. Its dashboard binds to loopback and reads a portable
-NDJSON event stream. Teams can later provide remote sinks without forcing a
+JSONL event stream. Teams can later provide remote sinks without forcing a
 hosted service on individual developers.
 
 ## Scope
