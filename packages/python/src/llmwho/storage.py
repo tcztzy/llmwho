@@ -145,12 +145,20 @@ class SQLiteStore:
             check_same_thread=False,
             isolation_level=None,
         )
+        os.chmod(self.path, 0o600)
         with self._lock:
             self._connection.execute("PRAGMA journal_mode=WAL")
             self._connection.execute("PRAGMA synchronous=NORMAL")
             self._connection.execute("PRAGMA foreign_keys=ON")
             self._connection.executescript(_SCHEMA)
             self._connection.execute("PRAGMA user_version=1")
+            self._protect_sidecars()
+
+    def _protect_sidecars(self) -> None:
+        for suffix in ("", "-wal", "-shm"):
+            candidate = Path(f"{self.path}{suffix}")
+            if candidate.exists():
+                os.chmod(candidate, 0o600)
 
     def _assert_open(self) -> None:
         if self._closed:
@@ -213,6 +221,7 @@ class SQLiteStore:
                 self._connection.execute("ROLLBACK")
                 raise
             self._connection.execute("COMMIT")
+            self._protect_sidecars()
             return self._connection.total_changes - before
 
     def read(self, limit: int | None = None) -> list[dict[str, Any]]:

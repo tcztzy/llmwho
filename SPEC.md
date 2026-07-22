@@ -99,6 +99,7 @@ V39: Python/Node remote sink → bounded non-blocking delivery, uninstrumented t
 V40: Python/Node Collector config and wire payload parity; auth uses `Authorization: Bearer`; credentials ∉ events
 V41: Collector dashboard reads same SQLite repository as ingest and polls live; availability/transport/behavior/capability/identity separation preserved
 V42: v0.4 deployable as one Python process/container; `collector` includes ingest + dashboard; no external runtime dependency beyond Python stdlib
+V43: Collector SQLite database/WAL/SHM + JSONL export → owner-only `0600` despite permissive process umask
 
 ## §T TASKS
 id|status|task|cites
@@ -124,7 +125,7 @@ T19|x|implement SQLite shared repository, schema, idempotence, JSONL import/expo
 T20|x|implement authenticated Collector native + OTLP ingest, shared dashboard/query API, CLI, tests|V2,V3,V9,V13,V14,V34,V36,V37,V38,V41,I.collector,I.cli
 T21|x|implement bounded fail-open Python/Node remote sinks, init/env config, shutdown flush, parity tests|V1,V2,V3,V4,V5,V7,V13,V39,V40,I.py,I.js,I.store
 T22|x|ship all-in-one container, live Collector docs/tutorial/security guidance, contract tests|V2,V3,V9,V16,V37,V41,V42
-T23|~|bump v0.4 versions; run Python/Node lint, type, test, build, install, repository gates|V17,V18,V32,V33,V42
+T23|~|bump v0.4 versions; run Python/Node lint, type, test, build, install, repository gates|V17,V18,V32,V33,V42,V43
 
 ## §B BUGS
 id|date|cause|fix
@@ -140,3 +141,4 @@ B9|2026-07-22|OTLP test searched unescaped event JSON inside an outer JSON seria
 B10|2026-07-22|Collector doc contract bound one paraphrase despite equivalent atomic-rejection wording|assert separate semantic fragments under V26; no new invariant
 B11|2026-07-22|container verifier overmounted owned `/data` with root-owned tmpfs, blocking UID 10001|verify V42 with image-initialized anonymous volume; no new invariant
 B12|2026-07-22|runtime validator checked core fields but not full shared-schema keys/types at Collector boundary|enforce complete Python/Node `ObservationV1` shape and add V36 parity tests; no new invariant
+B13|2026-07-22|SQLite creation inherited process umask and could expose operational metadata to group/others|V43

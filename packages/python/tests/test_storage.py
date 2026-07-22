@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import sqlite3
 from tempfile import TemporaryDirectory
@@ -33,6 +34,20 @@ class SQLiteStoreTests(unittest.TestCase):
                     version = connection.execute("PRAGMA user_version").fetchone()[0]
                 self.assertEqual(journal_mode, "wal")
                 self.assertEqual(version, 1)
+
+    def test_v43_database_and_sidecars_ignore_permissive_umask(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "collector.sqlite3"
+            previous_umask = os.umask(0)
+            try:
+                with SQLiteStore(path) as store:
+                    store.append(observation("private"))
+                    candidates = [path, Path(f"{path}-wal"), Path(f"{path}-shm")]
+                    for candidate in candidates:
+                        if candidate.exists():
+                            self.assertEqual(candidate.stat().st_mode & 0o777, 0o600)
+            finally:
+                os.umask(previous_umask)
 
     def test_append_is_idempotent_and_read_order_is_deterministic(self) -> None:
         with TemporaryDirectory() as directory, SQLiteStore(
