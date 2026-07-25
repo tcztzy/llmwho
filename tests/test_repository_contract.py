@@ -298,7 +298,9 @@ class RepositoryContractTests(unittest.TestCase):
         release = (ROOT / ".github/workflows/release.yml").read_text(
             encoding="utf-8"
         )
-        guide = (ROOT / "docs/RELEASING.md").read_text(encoding="utf-8")
+        guide = " ".join(
+            (ROOT / "docs/RELEASING.md").read_text(encoding="utf-8").split()
+        )
 
         self.assertIn("branches: [main]", ci)
         self.assertNotIn("id-token: write", ci)
@@ -307,7 +309,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("name: pypi", release)
         self.assertIn("name: npm", release)
         self.assertIn(
-            "needs: [build-python, build-node, publish-pypi, publish-npm]",
+            "needs: [build-python, build-node, build-container, "
+            "publish-pypi, publish-npm]",
             release,
         )
         self.assertIn("needs: verify-registries", release)
@@ -323,6 +326,43 @@ class RepositoryContractTests(unittest.TestCase):
             "`pypi`",
             "`npm`",
             "rerun only the failed job",
+        ):
+            self.assertIn(phrase, guide)
+
+    def test_v46_container_ci_and_protected_main_release_gate(self) -> None:
+        ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        release = (ROOT / ".github/workflows/release.yml").read_text(
+            encoding="utf-8"
+        )
+        guide = " ".join(
+            (ROOT / "docs/RELEASING.md").read_text(encoding="utf-8").split()
+        )
+        smoke = ROOT / "scripts/smoke-container.sh"
+        smoke_text = smoke.read_text(encoding="utf-8")
+
+        self.assertIn("\n  container:\n", ci)
+        self.assertIn("scripts/smoke-container.sh llmwho:ci", ci)
+        self.assertIn("\n  build-container:\n", release)
+        self.assertIn("scripts/smoke-container.sh llmwho:release", release)
+        self.assertIn("needs: [build-python, build-container]", release)
+        self.assertIn("needs: [build-node, build-container]", release)
+        self.assertIn(
+            "git fetch --no-tags origin main:refs/remotes/origin/main", release
+        )
+        self.assertIn("git merge-base --is-ancestor HEAD origin/main", release)
+        self.assertNotEqual(smoke.stat().st_mode & 0o111, 0)
+        for phrase in (
+            "10001:10001",
+            "/api/health",
+            "error.code == 401",
+            "/api/summary",
+        ):
+            self.assertIn(phrase, smoke_text)
+        for phrase in (
+            "active repository ruleset",
+            "require these CI checks",
+            "`container`",
+            "rejects a tag whose commit is not in its history",
         ):
             self.assertIn(phrase, guide)
 

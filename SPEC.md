@@ -133,7 +133,7 @@ T22|x|ship all-in-one container, live Collector docs/tutorial/security guidance,
 T23|x|bump v0.4 versions; run Python/Node lint, type, test, build, install, repository gates|V17,V18,V32,V33,V42,V43
 T24|x|replace provider-declaration identity confidence with breaking ObservationV2 declaration semantics across Python/Node/docs|V6,V7,V19,V20,V21,V22,V44,V47,I.event,I.anthropic
 T25|x|implement bounded indexed Collector summary + cohort filters + cursor event pages; update dashboard|V9,V10,V34,V41,V45,I.dashboard,I.collector
-T26|.|add container CI smoke + protected-main release gate; document maintainer setup|V17,V32,V42,V46
+T26|~|add container CI smoke + protected-main release gate; document maintainer setup|V17,V32,V42,V46
 
 ## §B BUGS
 id|date|cause|fix

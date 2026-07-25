@@ -196,7 +196,9 @@ Non-loopback binds require `LLMWHO_COLLECTOR_TOKEN`; data APIs require the same
 value as a Bearer token. The dashboard asks for it in protected deployments and
 keeps it in page memory. Use TLS before sending that credential across a
 network. For Docker Compose, API details, OTLP mapping, JSONL import/export, and
-the data ownership model, see [Self-hosted Collector](docs/COLLECTOR.md).
+the data ownership model, see [Self-hosted Collector](docs/COLLECTOR.md). The
+same non-root image receives a health/auth/data-API smoke test in pull-request
+and release CI.
 Collector summaries default to the most recent 24 hours and can be filtered by
 time, endpoint host/path, provider, and requested model. Event history uses
 bounded cursor pages, so the live dashboard never reloads the full database.

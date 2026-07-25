@@ -40,6 +40,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.RELEASE_REF }}
+          fetch-depth: 0
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -47,8 +48,25 @@ jobs:
           package-manager-cache: false
       - name: Match tag to package versions
         run: node scripts/check-release-tag.mjs "$RELEASE_TAG"
+      - name: Require release tag commit on main
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor HEAD origin/main
       - name: Check repository contracts
         run: python -m unittest tests/test_repository_contract.py -v
+
+  build-container:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_REF }}
+      - name: Build non-root Collector image
+        run: docker build --tag llmwho:release .
+      - name: Smoke-test health, auth, and data API
+        run: scripts/smoke-container.sh llmwho:release
 
   build-python:
     needs: validate
@@ -143,7 +161,7 @@ jobs:
           if-no-files-found: error
 
   publish-pypi:
-    needs: build-python
+    needs: [build-python, build-container]
     if: github.event_name == 'push' || inputs.publish_pypi
     runs-on: ubuntu-latest
     environment:
@@ -163,7 +181,7 @@ jobs:
           packages-dir: dist/
 
   publish-npm:
-    needs: build-node
+    needs: [build-node, build-container]
     if: github.event_name == 'push' || inputs.publish_npm
     runs-on: ubuntu-latest
     environment:
@@ -189,11 +207,12 @@ jobs:
         run: npm publish ./dist/*.tgz --access public
 
   verify-registries:
-    needs: [build-python, build-node, publish-pypi, publish-npm]
+    needs: [build-python, build-node, build-container, publish-pypi, publish-npm]
     if: >-
       always() &&
       needs.build-python.result == 'success' &&
       needs.build-node.result == 'success' &&
+      needs.build-container.result == 'success' &&
       (needs.publish-pypi.result == 'success' || needs.publish-pypi.result == 'skipped') &&
       (needs.publish-npm.result == 'success' || needs.publish-npm.result == 'skipped')
     runs-on: ubuntu-latest
