@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { setImmediate as waitForImmediate } from "node:timers/promises";
+import { setTimeout as delay } from "node:timers/promises";
 import { afterEach, test } from "node:test";
 
 import {
@@ -30,6 +30,14 @@ function event(identifier = "event-1") {
   });
   value.event_id = identifier;
   return value;
+}
+
+async function waitFor(predicate) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (predicate()) return;
+    await delay(10);
+  }
+  assert.fail("condition was not met within 1 second");
 }
 
 test("native RemoteStore sends bounded content-free batches with bearer auth", async () => {
@@ -111,7 +119,7 @@ test("init uses original fetch for Collector delivery without recursive observat
     body: JSON.stringify({ model: "model", messages: [] }),
   });
   assert.equal(response.status, 200);
-  await waitForImmediate();
+  await waitFor(() => calls.some(([url]) => url.includes("collector.example")));
   assert.equal(await handle.store.close(), true);
   handle.shutdown();
   assert.equal(calls.length, 2);

@@ -154,3 +154,4 @@ B14|2026-07-22|local release verifier left `uv run` then assumed a system `pytho
 B15|2026-07-25|provider-controlled `response.body.model` received arbitrary `0.98` identity confidence|V44,V47
 B16|2026-07-25|Collector dashboard poll read/deserialized/sorted full observation history every 5s|V45
 B17|2026-07-25|container deliverable had no CI runtime smoke and `main` accepted unguarded release commits|V46
+B18|2026-07-25|Node 18 CI test assumed response-clone delivery completed after one event-loop turn|wait on the observable Collector call with a bounded deadline; no new invariant
