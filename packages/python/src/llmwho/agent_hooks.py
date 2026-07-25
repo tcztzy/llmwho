@@ -192,13 +192,13 @@ def observe_hook_event(
         return None
 
     duration_ms = _duration_ms(state, current_ms)
-    claimed_model = model or _safe_model(state.get("model"))
+    requested_model = model or _safe_model(state.get("model"))
     request: dict[str, Any] = {"operation": "agent.turn"}
     input_bytes = state.get("input_bytes")
     if type(input_bytes) is int:
         request["input_bytes"] = input_bytes
-    if claimed_model:
-        request["claimed_model"] = claimed_model
+    if requested_model:
+        request["requested_model"] = requested_model
 
     response = None
     outcome = "success"
@@ -216,7 +216,7 @@ def observe_hook_event(
         duration_ms=duration_ms,
         outcome=outcome,
         provider=str(config["provider"]),
-        claimed_model=claimed_model,
+        requested_model=requested_model,
         request=request,
         response=response,
         error_type=error_type,

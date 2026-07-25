@@ -64,14 +64,15 @@ function assertExpected(event, expected) {
   else assert.equal("error_type" in event.transport, false);
   assert.equal(event.request.operation, "agent.turn");
   assert.equal(event.request.input_bytes, expected.input_bytes);
-  assert.equal(event.request.claimed_model, expected.model);
+  assert.equal(event.request.requested_model, expected.model);
   if (expected.output_bytes !== undefined) {
     assert.equal(event.response.output_bytes, expected.output_bytes);
   } else {
     assert.equal("response" in event, false);
   }
   assert.equal(event.identity.status, "unknown");
-  assert.equal(event.identity.claimed_model, expected.model);
+  assert.deepEqual(event.identity.candidates, []);
+  assert.deepEqual(event.identity.evidence, []);
   assert.deepEqual(event.privacy, { content_captured: false, redactions: 0 });
 }
 
@@ -155,7 +156,7 @@ test("hook CLI correlates processes and preserves Claude/Codex output protocols"
   }
   const claudeEvent = new JSONLStore(claudeStorage).read()[0];
   assert.equal(claudeEvent.endpoint.provider, "anthropic");
-  assert.equal(claudeEvent.request.claimed_model, "claude-sonnet-5");
+  assert.equal(claudeEvent.request.requested_model, "claude-sonnet-5");
   const claudePersisted = readFileSync(claudeStorage, "utf8");
   assert.equal(claudePersisted.includes("cross-process-session"), false);
   assert.equal(claudePersisted.includes("do not persist"), false);

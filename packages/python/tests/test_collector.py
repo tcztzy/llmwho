@@ -19,9 +19,9 @@ def event(identifier: str = "event-1") -> dict:
         url="https://api.example/v1/chat/completions",
         duration_ms=12,
         outcome="success",
-        claimed_model="expected",
+        requested_model="expected",
         declared_model="expected",
-        request={"operation": "chat.completions", "claimed_model": "expected"},
+        request={"operation": "chat.completions", "requested_model": "expected"},
         response={"status_code": 200, "output_bytes": 4},
     )
     value["event_id"] = identifier
@@ -132,7 +132,7 @@ class CollectorTests(unittest.TestCase):
                 rejected.exception.close()
 
                 unknown = event("event-4")
-                unknown["unexpected"] = "not in ObservationV1"
+                unknown["unexpected"] = "not in ObservationV2"
                 with self.assertRaises(HTTPError) as malformed:
                     collector.request(
                         "/api/v1/observations",

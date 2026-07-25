@@ -122,20 +122,20 @@ function operation(path) {
 
 function requestMetadata(url, payload, bytes) {
   if (isAnthropicMessagesUrl(url)) {
-    const [metadata, claimedModel] = anthropicRequestMetadata(payload, bytes);
-    return [metadata, claimedModel, ANTHROPIC_PROVIDER];
+    const [metadata, requestedModel] = anthropicRequestMetadata(payload, bytes);
+    return [metadata, requestedModel, ANTHROPIC_PROVIDER];
   }
   const result = { operation: operation(new URL(url).pathname), input_bytes: bytes };
-  let claimedModel;
+  let requestedModel;
   if (payload) {
     if (typeof payload.model === "string") {
-      claimedModel = payload.model;
-      result.claimed_model = claimedModel;
+      requestedModel = payload.model;
+      result.requested_model = requestedModel;
     }
     if (typeof payload.stream === "boolean") result.stream = payload.stream;
     if (Array.isArray(payload.messages)) result.role_count = payload.messages.length;
   }
-  return [result, claimedModel, undefined];
+  return [result, requestedModel, undefined];
 }
 
 function responseMetadata(payload, bytes, status, provider) {
@@ -147,7 +147,6 @@ function responseMetadata(payload, bytes, status, provider) {
   if (payload) {
     if (typeof payload.model === "string") {
       declaredModel = payload.model;
-      result.declared_model = declaredModel;
     }
     if (typeof payload.system_fingerprint === "string") {
       result.system_fingerprint = payload.system_fingerprint;
@@ -201,7 +200,7 @@ function recordResponse(handle, context, response) {
     outcome: response.ok || (response.status >= 300 && response.status < 400)
       ? "success"
       : "http_error",
-    claimedModel: context.claimedModel,
+    requestedModel: context.requestedModel,
     provider: context.provider,
     request: context.request,
     redactions: context.redactions,
@@ -291,10 +290,10 @@ export function init(options = {}) {
     const headers = headersObject(input, requestInit);
     const [payload, bytes] = jsonBody(requestInit?.body);
     let request;
-    let claimedModel;
+    let requestedModel;
     let provider;
     try {
-      [request, claimedModel, provider] = requestMetadata(url, payload, bytes);
+      [request, requestedModel, provider] = requestMetadata(url, payload, bytes);
     } catch {
       request = { operation: "unknown", input_bytes: bytes };
     }
@@ -310,7 +309,7 @@ export function init(options = {}) {
           ? "timeout"
           : "network_error",
         provider,
-        claimedModel,
+        requestedModel,
         request,
         redactions,
       });
@@ -319,7 +318,7 @@ export function init(options = {}) {
     try {
       recordResponse(
         handle,
-        { url, started, request, claimedModel, provider, redactions },
+        { url, started, request, requestedModel, provider, redactions },
         response,
       );
     } catch {

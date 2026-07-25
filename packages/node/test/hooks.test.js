@@ -51,7 +51,8 @@ test("init is idempotent, preserves Response identity, and stores no content", a
     assert.equal(text.includes("never persist input"), false);
     assert.equal(text.includes("never persist output"), false);
     const event = JSON.parse(text.trim());
-    assert.equal(event.identity.status, "mismatch");
+    assert.equal(event.identity.status, "unknown");
+    assert.equal(event.model_declaration.status, "mismatch");
     assert.equal(event.request.role_count, 1);
   } finally {
     handle.shutdown();

@@ -17,7 +17,7 @@ def event(identifier: str) -> dict:
         url="https://api.example/v1/chat/completions",
         duration_ms=5,
         outcome="success",
-        claimed_model="model",
+        requested_model="model",
         declared_model="model",
     )
     value["event_id"] = identifier

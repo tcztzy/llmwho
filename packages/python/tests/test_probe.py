@@ -76,7 +76,11 @@ class ProbeTests(unittest.TestCase):
                 )
                 self.assertTrue(report["completed"])
                 self.assertEqual(report["capability"], {"passed": 4, "total": 4, "mean_score": 1.0})
-                self.assertEqual(report["identity"]["statuses"], {"mismatch": 4})
+                self.assertEqual(
+                    report["declarations"]["statuses"],
+                    {"mismatch": 4},
+                )
+                self.assertEqual(report["identity"]["status"], "unknown")
                 events = JSONLStore(path).read()
                 self.assertEqual(len(events), 4)
                 self.assertTrue(all(event["source"] == "probe" for event in events))
@@ -101,10 +105,17 @@ class ProbeTests(unittest.TestCase):
                     model="client-model",
                     storage_path=str(path),
                 )
-                self.assertEqual(report["identity"]["statuses"], {"unknown": 4})
-                self.assertEqual(report["identity"]["observed_models"], {})
+                self.assertEqual(
+                    report["declarations"]["statuses"],
+                    {"missing": 4},
+                )
+                self.assertEqual(report["declarations"]["declared_models"], {})
+                self.assertEqual(report["identity"]["status"], "unknown")
                 events = JSONLStore(path).read()
                 self.assertTrue(all(event["identity"]["evidence"] == [] for event in events))
+                self.assertTrue(
+                    all("model_declaration" not in event for event in events)
+                )
         finally:
             server.shutdown()
             server.server_close()

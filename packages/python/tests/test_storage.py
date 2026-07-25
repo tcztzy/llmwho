@@ -14,9 +14,9 @@ def observation(label: str, *, duration_ms: float = 1) -> dict:
         url=f"https://{label}.example/v1/chat/completions",
         duration_ms=duration_ms,
         outcome="success",
-        claimed_model=label,
+        requested_model=label,
         declared_model=label,
-        request={"operation": "chat.completions", "claimed_model": label},
+        request={"operation": "chat.completions", "requested_model": label},
     )
     event["event_id"] = label
     event["timestamp"] = f"2026-07-22T00:00:0{int(duration_ms)}Z"
@@ -33,7 +33,7 @@ class SQLiteStoreTests(unittest.TestCase):
                     journal_mode = connection.execute("PRAGMA journal_mode").fetchone()[0]
                     version = connection.execute("PRAGMA user_version").fetchone()[0]
                 self.assertEqual(journal_mode, "wal")
-                self.assertEqual(version, 1)
+                self.assertEqual(version, 2)
 
     def test_v43_database_and_sidecars_ignore_permissive_umask(self) -> None:
         with TemporaryDirectory() as directory:

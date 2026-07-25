@@ -31,7 +31,7 @@ test("shared fixture normalizes content-free Anthropic metadata", () => {
   assert.equal(isAnthropicMessagesUrl(fixture.url), true);
   assert.equal(isAnthropicMessagesUrl("https://api.example/v1/messages"), false);
 
-  const [request, claimedModel] = anthropicRequestMetadata(
+  const [request, requestedModel] = anthropicRequestMetadata(
     fixture.request,
     fixture.request_size,
   );
@@ -43,7 +43,7 @@ test("shared fixture normalizes content-free Anthropic metadata", () => {
 
   assert.deepEqual(request, fixture.expected_request);
   assert.deepEqual(response, fixture.expected_response);
-  assert.equal(claimedModel, fixture.request.model);
+  assert.equal(requestedModel, fixture.request.model);
   assert.equal(declaredModel, fixture.response.model);
   const serialized = JSON.stringify({ request, response });
   assert.equal(serialized.includes("fixture user content"), false);
@@ -51,7 +51,7 @@ test("shared fixture normalizes content-free Anthropic metadata", () => {
 });
 
 test("malformed optional Anthropic metadata is omitted", () => {
-  const [request, claimedModel] = anthropicRequestMetadata(
+  const [request, requestedModel] = anthropicRequestMetadata(
     { model: 7, stream: "yes", messages: {} },
     -1,
   );
@@ -61,7 +61,7 @@ test("malformed optional Anthropic metadata is omitted", () => {
     200,
   );
   assert.deepEqual(request, { operation: "messages", input_bytes: 0 });
-  assert.equal(claimedModel, undefined);
+  assert.equal(requestedModel, undefined);
   assert.deepEqual(response, { status_code: 200, output_bytes: 0 });
   assert.equal(declaredModel, undefined);
 });
@@ -92,6 +92,8 @@ test("fetch hook normalizes direct Anthropic response without storing content", 
     assert.equal(event.request.operation, "messages");
     assert.equal(event.request.role_count, 2);
     assert.equal(event.response.usage.total_tokens, 20);
+    assert.equal(event.model_declaration.status, "matched");
+    assert.deepEqual(event.identity, { status: "unknown", candidates: [], evidence: [] });
     assert.deepEqual(event.privacy, { content_captured: false, redactions: 2 });
     assert.equal(persisted.includes("fixture user content"), false);
     assert.equal(persisted.includes("fixture response content"), false);
@@ -125,7 +127,7 @@ test("direct Anthropic stream response is never cloned or read", async () => {
     assert.equal(event.endpoint.provider, "anthropic");
     assert.equal(event.request.stream, true);
     assert.equal(event.response.output_bytes, 0);
-    assert.equal("declared_model" in event.response, false);
+    assert.equal("model_declaration" in event, false);
     assert.equal(event.transport.outcome, "success");
   } finally {
     handle.shutdown();

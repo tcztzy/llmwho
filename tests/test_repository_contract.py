@@ -36,8 +36,34 @@ class RepositoryContractTests(unittest.TestCase):
             "SECURITY.md",
             "Dockerfile",
             "compose.yaml",
+            "shared/observation-v2.schema.json",
+            "shared/fixtures/observation-v2.json",
         ):
             self.assertTrue((ROOT / relative).is_file(), relative)
+        self.assertFalse((ROOT / "shared/observation-v1.schema.json").exists())
+        self.assertFalse((ROOT / "shared/fixtures/observation-v1.json").exists())
+
+    def test_v44_provider_declaration_is_not_identity(self) -> None:
+        fixture = json.loads(
+            (ROOT / "shared/fixtures/observation-v2.json").read_text()
+        )
+        self.assertEqual(fixture["schema_version"], "2")
+        self.assertEqual(fixture["identity"]["status"], "unknown")
+        self.assertEqual(fixture["identity"]["candidates"], [])
+        self.assertEqual(fixture["identity"]["evidence"], [])
+        self.assertNotIn("confidence", fixture["identity"])
+        self.assertEqual(
+            fixture["model_declaration"]["evidence"][0]["kind"],
+            "provider_declaration",
+        )
+        for source in (
+            ROOT / "packages/python/src/llmwho/identity.py",
+            ROOT / "packages/node/src/identity.js",
+        ):
+            text = source.read_text()
+            self.assertNotIn("0.98", text)
+            self.assertNotIn("inferIdentity", text)
+            self.assertNotIn("infer_identity", text)
 
     def test_vision_locks_founder_expectations(self) -> None:
         vision = (ROOT / "docs/VISION.md").read_text(encoding="utf-8")
@@ -53,10 +79,12 @@ class RepositoryContractTests(unittest.TestCase):
         ):
             self.assertIn(phrase, vision)
 
-    def test_readme_states_probabilistic_and_passive_contract(self) -> None:
+    def test_readme_states_honest_identity_and_passive_contract(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("or send synthetic traffic", readme)
-        self.assertIn("probabilistic", readme)
+        self.assertIn(
+            "provider declaration, never as model identity or confidence", readme
+        )
         self.assertIn("does **not** include raw prompts", readme)
 
     def test_research_separates_evidence_status_and_product_claims(self) -> None:
@@ -77,7 +105,7 @@ class RepositoryContractTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         stability = (ROOT / "docs/STABILITY.md").read_text(encoding="utf-8")
         for phrase in (
-            "declared `model` field",
+            "provider declaration, never as model identity or confidence",
             "Undocumented model response headers are ignored",
             "Active probes cost requests and are never triggered by `init()`",
             "Raw content capture is deliberately unavailable in 0.4",

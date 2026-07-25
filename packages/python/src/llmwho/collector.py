@@ -50,7 +50,7 @@ def _otlp_attribute(record: dict[str, Any], name: str) -> str | None:
 
 
 def observations_from_otlp(payload: object) -> list[dict[str, Any]]:
-    """Extract marked ObservationV1 log bodies; ignore unrelated OTLP logs."""
+    """Extract marked ObservationV2 log bodies; ignore unrelated OTLP logs."""
 
     if not isinstance(payload, dict):
         raise ValueError("invalid OTLP logs envelope")
@@ -187,7 +187,7 @@ class CollectorHandler(DashboardHandler):
                     "status": "ok",
                     "service": "llmwho-collector",
                     "version": __version__,
-                    "schema_version": "1",
+                    "schema_version": "2",
                 },
             )
             return

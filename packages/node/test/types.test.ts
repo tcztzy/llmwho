@@ -1,5 +1,5 @@
 import {
-  type ObservationV1,
+  type ObservationV2,
   type ProbeReport,
   type AnalysisReport,
   type OutputAffinityReport,
@@ -22,7 +22,7 @@ const remote = new RemoteStore("http://127.0.0.1:7734", {
   protocol: "native",
   maxQueue: 10,
 });
-const remoteEvents: Promise<ObservationV1[]> = remote.read(10);
+const remoteEvents: Promise<ObservationV2[]> = remote.read(10);
 
 const affinity: Promise<AnalysisReport<OutputAffinityReport>> = science.outputAffinityMatrix(
   new Map([
@@ -38,7 +38,7 @@ const customScience = new ScienceRuntimeManager({
   pluginPackages: ["llmwho-example==1.2.3"],
 });
 
-async function checkPublicTypes(events: ObservationV1[]): Promise<ProbeReport> {
+async function checkPublicTypes(events: ObservationV2[]): Promise<ProbeReport> {
   summarize(events);
   handle.shutdown();
   return probe({

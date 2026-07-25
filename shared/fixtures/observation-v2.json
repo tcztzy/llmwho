@@ -1,6 +1,6 @@
 {
-  "schema_version": "1",
-  "event_id": "fixture-0001",
+  "schema_version": "2",
+  "event_id": "fixture-0002",
   "timestamp": "2026-07-20T00:00:00Z",
   "source": "passive",
   "modality": "text",
@@ -16,13 +16,12 @@
   },
   "request": {
     "operation": "chat.completions",
-    "claimed_model": "claimed-model",
+    "requested_model": "requested-model",
     "stream": false,
     "input_bytes": 128,
     "role_count": 2
   },
   "response": {
-    "declared_model": "observed-model",
     "system_fingerprint": "fp_fixture",
     "status_code": 200,
     "output_bytes": 64,
@@ -32,30 +31,26 @@
       "total_tokens": 19
     }
   },
+  "model_declaration": {
+    "status": "mismatch",
+    "declared_model": "declared-model",
+    "evidence": [
+      {
+        "kind": "provider_declaration",
+        "source": "response.body.model",
+        "value": "declared-model"
+      }
+    ]
+  },
   "transport": {
     "outcome": "success",
     "duration_ms": 123.5,
     "ttft_ms": 45.5
   },
   "identity": {
-    "status": "mismatch",
-    "claimed_model": "claimed-model",
-    "observed_model": "observed-model",
-    "confidence": 0.98,
-    "candidates": [
-      {
-        "label": "observed-model",
-        "confidence": 0.98
-      }
-    ],
-    "evidence": [
-      {
-        "kind": "response_model",
-        "source": "response.body.model",
-        "value": "observed-model",
-        "weight": 0.98
-      }
-    ]
+    "status": "unknown",
+    "candidates": [],
+    "evidence": []
   },
   "privacy": {
     "content_captured": false,

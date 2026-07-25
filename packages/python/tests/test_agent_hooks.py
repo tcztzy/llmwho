@@ -39,7 +39,7 @@ class AgentHookTests(unittest.TestCase):
             self.assertNotIn("error_type", event["transport"])
         self.assertEqual(event["request"]["operation"], "agent.turn")
         self.assertEqual(event["request"]["input_bytes"], expected["input_bytes"])
-        self.assertEqual(event["request"]["claimed_model"], expected["model"])
+        self.assertEqual(event["request"]["requested_model"], expected["model"])
         if "output_bytes" in expected:
             self.assertEqual(
                 event["response"]["output_bytes"], expected["output_bytes"]
@@ -47,7 +47,8 @@ class AgentHookTests(unittest.TestCase):
         else:
             self.assertNotIn("response", event)
         self.assertEqual(event["identity"]["status"], "unknown")
-        self.assertEqual(event["identity"]["claimed_model"], expected["model"])
+        self.assertEqual(event["identity"]["candidates"], [])
+        self.assertEqual(event["identity"]["evidence"], [])
         self.assertEqual(
             event["privacy"], {"content_captured": False, "redactions": 0}
         )
@@ -157,7 +158,7 @@ class AgentHookTests(unittest.TestCase):
                 self.assertEqual(result.stderr, "")
             event = JSONLStore(storage).read()[0]
             self.assertEqual(event["endpoint"]["provider"], "anthropic")
-            self.assertEqual(event["request"]["claimed_model"], "claude-sonnet-5")
+            self.assertEqual(event["request"]["requested_model"], "claude-sonnet-5")
             persisted = storage.read_text(encoding="utf-8")
             self.assertNotIn("cross-process-session", persisted)
             self.assertNotIn("do not persist", persisted)

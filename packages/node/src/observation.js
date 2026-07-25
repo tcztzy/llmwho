@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { inferIdentity } from "./identity.js";
+import { providerDeclaration, unknownIdentity } from "./identity.js";
 import { assertContentFree, endpointFromUrl } from "./privacy.js";
 import { VERSION } from "./version.js";
 
@@ -10,7 +10,8 @@ const OUTCOMES = new Set([
   "network_error",
   "stream_error",
 ]);
-const IDENTITY_STATUSES = new Set(["matched", "mismatch", "unknown"]);
+const IDENTITY_STATUSES = new Set(["unknown", "inferred"]);
+const DECLARATION_STATUSES = new Set(["matched", "mismatch", "unverified"]);
 const MODALITIES = new Set([
   "text",
   "image",
@@ -28,6 +29,7 @@ const TOP_LEVEL_KEYS = new Set([
   "sdk",
   "endpoint",
   "transport",
+  "model_declaration",
   "identity",
   "privacy",
   "request",
@@ -81,14 +83,14 @@ function validateRequest(value) {
   const request = object(value, "request", {
     allowed: [
       "operation",
-      "claimed_model",
+      "requested_model",
       "stream",
       "input_bytes",
       "role_count",
       "probe_case_id",
     ],
   });
-  for (const key of ["operation", "claimed_model", "probe_case_id"]) {
+  for (const key of ["operation", "requested_model", "probe_case_id"]) {
     optionalString(request, key, "request");
   }
   if (Object.hasOwn(request, "stream") && typeof request.stream !== "boolean") {
@@ -102,14 +104,13 @@ function validateRequest(value) {
 function validateResponse(value) {
   const response = object(value, "response", {
     allowed: [
-      "declared_model",
       "system_fingerprint",
       "status_code",
       "output_bytes",
       "usage",
     ],
   });
-  for (const key of ["declared_model", "system_fingerprint"]) {
+  for (const key of ["system_fingerprint"]) {
     optionalString(response, key, "response");
   }
   if (Object.hasOwn(response, "status_code")) {
@@ -128,24 +129,45 @@ function validateResponse(value) {
   }
 }
 
+function validateModelDeclaration(value) {
+  const declaration = object(value, "model_declaration", {
+    allowed: ["status", "declared_model", "evidence"],
+    required: ["status", "declared_model", "evidence"],
+  });
+  string(declaration.status, "model_declaration.status");
+  if (!DECLARATION_STATUSES.has(declaration.status)) {
+    throw new Error("invalid model declaration status");
+  }
+  const declaredModel = string(
+    declaration.declared_model,
+    "model_declaration.declared_model",
+    { nonempty: true },
+  );
+  if (!Array.isArray(declaration.evidence) || declaration.evidence.length !== 1) {
+    throw new Error("model_declaration.evidence must contain one item");
+  }
+  const evidence = object(declaration.evidence[0], "model_declaration.evidence[0]", {
+    allowed: ["kind", "source", "value"],
+    required: ["kind", "source", "value"],
+  });
+  if (evidence.kind !== "provider_declaration") {
+    throw new Error("invalid model declaration evidence kind");
+  }
+  if (evidence.source !== "response.body.model") {
+    throw new Error("invalid model declaration evidence source");
+  }
+  if (evidence.value !== declaredModel) {
+    throw new Error("model declaration evidence value must match declared_model");
+  }
+}
+
 function validateIdentity(value) {
   const identity = object(value, "identity", {
-    allowed: [
-      "status",
-      "claimed_model",
-      "observed_model",
-      "confidence",
-      "candidates",
-      "evidence",
-    ],
-    required: ["status", "confidence", "candidates", "evidence"],
+    allowed: ["status", "candidates", "evidence"],
+    required: ["status", "candidates", "evidence"],
   });
   string(identity.status, "identity.status");
   if (!IDENTITY_STATUSES.has(identity.status)) throw new Error("invalid identity status");
-  for (const key of ["claimed_model", "observed_model"]) {
-    optionalString(identity, key, "identity");
-  }
-  number(identity.confidence, "identity.confidence", { minimum: 0, maximum: 1 });
   if (!Array.isArray(identity.candidates)) {
     throw new Error("identity.candidates must be an array");
   }
@@ -165,17 +187,25 @@ function validateIdentity(value) {
   }
   identity.evidence.forEach((child, index) => {
     const evidence = object(child, `identity.evidence[${index}]`, {
-      allowed: ["kind", "source", "value", "weight"],
-      required: ["kind", "source", "weight"],
+      allowed: ["kind", "source", "value", "detector_id", "detector_version"],
+      required: ["kind", "source", "detector_id", "detector_version"],
     });
     string(evidence.kind, `identity.evidence[${index}].kind`);
     string(evidence.source, `identity.evidence[${index}].source`);
     optionalString(evidence, "value", `identity.evidence[${index}]`);
-    number(evidence.weight, `identity.evidence[${index}].weight`, {
-      minimum: 0,
-      maximum: 1,
+    string(evidence.detector_id, `identity.evidence[${index}].detector_id`, {
+      nonempty: true,
+    });
+    string(evidence.detector_version, `identity.evidence[${index}].detector_version`, {
+      nonempty: true,
     });
   });
+  if (identity.status === "unknown" && (identity.candidates.length || identity.evidence.length)) {
+    throw new Error("unknown identity must not contain candidates or evidence");
+  }
+  if (identity.status === "inferred" && (!identity.candidates.length || !identity.evidence.length)) {
+    throw new Error("inferred identity needs candidates and detector evidence");
+  }
 }
 
 export function newObservation({
@@ -186,7 +216,7 @@ export function newObservation({
   source = "passive",
   modality = "text",
   provider,
-  claimedModel,
+  requestedModel,
   declaredModel,
   request,
   response,
@@ -194,7 +224,7 @@ export function newObservation({
   redactions = 0,
 }) {
   const event = {
-    schema_version: "1",
+    schema_version: "2",
     event_id: randomUUID(),
     timestamp: new Date().toISOString(),
     source,
@@ -202,13 +232,17 @@ export function newObservation({
     sdk: { name: "llmwho-node", version: VERSION },
     endpoint: endpointFromUrl(url),
     transport: { outcome, duration_ms: Math.max(0, durationMs) },
-    identity: inferIdentity(claimedModel, declaredModel),
+    identity: unknownIdentity(),
     privacy: { content_captured: false, redactions: Math.max(0, redactions) },
   };
   if (provider) event.endpoint.provider = provider;
   if (errorType) event.transport.error_type = errorType;
-  if (request) event.request = { ...request };
+  const requestMetadata = { ...(request ?? {}) };
+  if (requestedModel) requestMetadata.requested_model = requestedModel;
+  if (Object.keys(requestMetadata).length) event.request = requestMetadata;
   if (response) event.response = { ...response };
+  const declaration = providerDeclaration(requestedModel, declaredModel);
+  if (declaration) event.model_declaration = declaration;
   if (probe) event.probe = { ...probe };
   validateObservation(event);
   return event;
@@ -216,7 +250,7 @@ export function newObservation({
 
 export function validateObservation(event) {
   assertContentFree(event);
-  const root = object(event, "ObservationV1", {
+  const root = object(event, "ObservationV2", {
     allowed: [...TOP_LEVEL_KEYS],
     required: [
       "schema_version",
@@ -231,7 +265,7 @@ export function validateObservation(event) {
       "privacy",
     ],
   });
-  if (event.schema_version !== "1") throw new Error("unsupported observation schema_version");
+  if (event.schema_version !== "2") throw new Error("unsupported observation schema_version");
   string(root.event_id, "event_id", { nonempty: true });
   const timestamp = string(root.timestamp, "timestamp", { nonempty: true });
   if (!/(?:Z|[+-]\d{2}:\d{2})$/.test(timestamp) || Number.isNaN(Date.parse(timestamp))) {
@@ -283,6 +317,9 @@ export function validateObservation(event) {
   integer(privacy.redactions, "privacy.redactions", { minimum: 0 });
   if (Object.hasOwn(root, "request")) validateRequest(root.request);
   if (Object.hasOwn(root, "response")) validateResponse(root.response);
+  if (Object.hasOwn(root, "model_declaration")) {
+    validateModelDeclaration(root.model_declaration);
+  }
   if (Object.hasOwn(root, "probe")) {
     const probe = object(root.probe, "probe", {
       allowed: ["case_id", "passed", "score", "check"],

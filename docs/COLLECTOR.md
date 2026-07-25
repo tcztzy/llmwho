@@ -2,7 +2,7 @@
 
 LLMWho 0.4 adds one deployable process that owns ingestion, SQLite persistence,
 queries, and the live dashboard. Applications and gateways send content-free
-`ObservationV1` events; dashboard and later science workers consume the same
+`ObservationV2` events; dashboard and later science workers consume the same
 logical data layer through the Collector instead of opening its database.
 
 ```text
@@ -106,7 +106,7 @@ When a token is configured, every data endpoint requires
 public. Native batches are atomic after validation. Duplicate `event_id` values
 are accepted idempotently.
 
-OTLP mode puts one compact `ObservationV1` JSON object in each
+OTLP mode puts one compact `ObservationV2` JSON object in each
 `LogRecord.body.stringValue` and marks it with
 `llmwho.event.type=observation`. Unmarked logs and unknown OTLP fields are
 ignored. Version 0.4 accepts OTLP/HTTP JSON, not protobuf. OTLP traces and
@@ -157,13 +157,14 @@ replacement and creates the resulting file with mode `0600`.
 
 ## Privacy boundary
 
-Collector accepts only content-free `ObservationV1` events. A batch containing
+Collector accepts only content-free `ObservationV2` events. Version 1 is
+intentionally rejected rather than translated. A batch containing
 raw `prompt`, `messages`, `content`, `body`, `input`, `output`, request or
 response bodies, or a privacy declaration other than
 `content_captured=false` is rejected without persisting any member. Error
 responses never echo the rejected body or token.
 
-Derived byte counts, token usage, endpoint paths, model claims, timings, and
-identity evidence still reveal operational metadata. Treat the database as
+Derived byte counts, token usage, endpoint paths, model declarations, timings,
+and detector evidence still reveal operational metadata. Treat the database as
 sensitive, restrict filesystem and dashboard access, rotate bearer tokens, and
 back it up through the export command.

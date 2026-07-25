@@ -1,4 +1,4 @@
-"""ObservationV1 construction and dependency-free runtime validation."""
+"""ObservationV2 construction and dependency-free runtime validation."""
 
 from datetime import datetime, timezone
 import math
@@ -6,7 +6,7 @@ from typing import Any
 from collections.abc import Mapping
 from uuid import uuid4
 
-from .identity import infer_identity
+from .identity import provider_declaration, unknown_identity
 from .privacy import assert_content_free, endpoint_from_url
 from .version import __version__
 
@@ -14,7 +14,8 @@ from .version import __version__
 OUTCOMES = frozenset(
     {"success", "http_error", "timeout", "network_error", "stream_error"}
 )
-IDENTITY_STATUSES = frozenset({"matched", "mismatch", "unknown"})
+IDENTITY_STATUSES = frozenset({"unknown", "inferred"})
+DECLARATION_STATUSES = frozenset({"matched", "mismatch", "unverified"})
 MODALITIES = frozenset(
     {"text", "image", "audio", "embedding", "multimodal", "unknown"}
 )
@@ -29,6 +30,7 @@ _TOP_LEVEL_KEYS = frozenset(
         "sdk",
         "endpoint",
         "transport",
+        "model_declaration",
         "identity",
         "privacy",
         "request",
@@ -110,14 +112,14 @@ def _validate_request(value: Any) -> None:
         "request",
         allowed={
             "operation",
-            "claimed_model",
+            "requested_model",
             "stream",
             "input_bytes",
             "role_count",
             "probe_case_id",
         },
     )
-    for key in ("operation", "claimed_model", "probe_case_id"):
+    for key in ("operation", "requested_model", "probe_case_id"):
         _optional_string(request, key, "request")
     if "stream" in request and not isinstance(request["stream"], bool):
         raise ValueError("request.stream must be a boolean")
@@ -131,14 +133,13 @@ def _validate_response(value: Any) -> None:
         value,
         "response",
         allowed={
-            "declared_model",
             "system_fingerprint",
             "status_code",
             "output_bytes",
             "usage",
         },
     )
-    for key in ("declared_model", "system_fingerprint"):
+    for key in ("system_fingerprint",):
         _optional_string(response, key, "response")
     if "status_code" in response:
         _integer(response["status_code"], "response.status_code", minimum=100, maximum=599)
@@ -154,26 +155,48 @@ def _validate_response(value: Any) -> None:
             _integer(child, f"response.usage.{key}", minimum=0)
 
 
+def _validate_model_declaration(value: Any) -> None:
+    declaration = _object(
+        value,
+        "model_declaration",
+        allowed={"status", "declared_model", "evidence"},
+        required={"status", "declared_model", "evidence"},
+    )
+    status = _string(declaration["status"], "model_declaration.status")
+    if status not in DECLARATION_STATUSES:
+        raise ValueError("invalid model declaration status")
+    declared_model = _string(
+        declaration["declared_model"],
+        "model_declaration.declared_model",
+        nonempty=True,
+    )
+    evidence = declaration["evidence"]
+    if not isinstance(evidence, list) or len(evidence) != 1:
+        raise ValueError("model_declaration.evidence must contain one item")
+    item = _object(
+        evidence[0],
+        "model_declaration.evidence[0]",
+        allowed={"kind", "source", "value"},
+        required={"kind", "source", "value"},
+    )
+    if item["kind"] != "provider_declaration":
+        raise ValueError("invalid model declaration evidence kind")
+    if item["source"] != "response.body.model":
+        raise ValueError("invalid model declaration evidence source")
+    if item["value"] != declared_model:
+        raise ValueError("model declaration evidence value must match declared_model")
+
+
 def _validate_identity(value: Any) -> None:
     identity = _object(
         value,
         "identity",
-        allowed={
-            "status",
-            "claimed_model",
-            "observed_model",
-            "confidence",
-            "candidates",
-            "evidence",
-        },
-        required={"status", "confidence", "candidates", "evidence"},
+        allowed={"status", "candidates", "evidence"},
+        required={"status", "candidates", "evidence"},
     )
     status = _string(identity["status"], "identity.status")
     if status not in IDENTITY_STATUSES:
         raise ValueError("invalid identity status")
-    for key in ("claimed_model", "observed_model"):
-        _optional_string(identity, key, "identity")
-    _number(identity["confidence"], "identity.confidence", minimum=0, maximum=1)
     candidates = identity["candidates"]
     if not isinstance(candidates, list):
         raise ValueError("identity.candidates must be an array")
@@ -198,18 +221,26 @@ def _validate_identity(value: Any) -> None:
         item = _object(
             child,
             f"identity.evidence[{index}]",
-            allowed={"kind", "source", "value", "weight"},
-            required={"kind", "source", "weight"},
+            allowed={"kind", "source", "value", "detector_id", "detector_version"},
+            required={"kind", "source", "detector_id", "detector_version"},
         )
         _string(item["kind"], f"identity.evidence[{index}].kind")
         _string(item["source"], f"identity.evidence[{index}].source")
         _optional_string(item, "value", f"identity.evidence[{index}]")
-        _number(
-            item["weight"],
-            f"identity.evidence[{index}].weight",
-            minimum=0,
-            maximum=1,
+        _string(
+            item["detector_id"],
+            f"identity.evidence[{index}].detector_id",
+            nonempty=True,
         )
+        _string(
+            item["detector_version"],
+            f"identity.evidence[{index}].detector_version",
+            nonempty=True,
+        )
+    if status == "unknown" and (candidates or evidence):
+        raise ValueError("unknown identity must not contain candidates or evidence")
+    if status == "inferred" and (not candidates or not evidence):
+        raise ValueError("inferred identity needs candidates and detector evidence")
 
 
 def new_observation(
@@ -221,7 +252,7 @@ def new_observation(
     source: str = "passive",
     modality: str = "text",
     provider: str | None = None,
-    claimed_model: str | None = None,
+    requested_model: str | None = None,
     declared_model: str | None = None,
     request: Mapping[str, Any] | None = None,
     response: Mapping[str, Any] | None = None,
@@ -229,7 +260,7 @@ def new_observation(
     redactions: int = 0,
 ) -> dict[str, Any]:
     event: dict[str, Any] = {
-        "schema_version": "1",
+        "schema_version": "2",
         "event_id": str(uuid4()),
         "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "source": source,
@@ -237,17 +268,23 @@ def new_observation(
         "sdk": {"name": "llmwho-python", "version": __version__},
         "endpoint": endpoint_from_url(url),
         "transport": {"outcome": outcome, "duration_ms": max(0.0, duration_ms)},
-        "identity": infer_identity(claimed_model, declared_model),
+        "identity": unknown_identity(),
         "privacy": {"content_captured": False, "redactions": max(0, redactions)},
     }
     if provider:
         event["endpoint"]["provider"] = provider
     if error_type:
         event["transport"]["error_type"] = error_type
-    if request:
-        event["request"] = dict(request)
+    request_metadata = dict(request or {})
+    if requested_model:
+        request_metadata["requested_model"] = requested_model
+    if request_metadata:
+        event["request"] = request_metadata
     if response:
         event["response"] = dict(response)
+    declaration = provider_declaration(requested_model, declared_model)
+    if declaration:
+        event["model_declaration"] = declaration
     if probe:
         event["probe"] = dict(probe)
     validate_observation(event)
@@ -258,7 +295,7 @@ def validate_observation(event: Mapping[str, Any]) -> None:
     assert_content_free(event)
     root = _object(
         event,
-        "ObservationV1",
+        "ObservationV2",
         allowed=_TOP_LEVEL_KEYS,
         required={
             "schema_version",
@@ -273,7 +310,7 @@ def validate_observation(event: Mapping[str, Any]) -> None:
             "privacy",
         },
     )
-    if event["schema_version"] != "1":
+    if event["schema_version"] != "2":
         raise ValueError("unsupported observation schema_version")
     _string(root["event_id"], "event_id", nonempty=True)
     timestamp = _string(root["timestamp"], "timestamp", nonempty=True)
@@ -338,6 +375,8 @@ def validate_observation(event: Mapping[str, Any]) -> None:
         _validate_request(root["request"])
     if "response" in root:
         _validate_response(root["response"])
+    if "model_declaration" in root:
+        _validate_model_declaration(root["model_declaration"])
     if "probe" in root:
         probe = _object(
             root["probe"],

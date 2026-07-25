@@ -51,7 +51,7 @@ already going to send. It can capture:
 - safe response headers and system fingerprints;
 - status, error category, retry evidence, latency, and streaming completion;
 - token counts and derived output characteristics;
-- changes in identity evidence across time.
+- changes in provider declarations across time.
 
 Passive observations alone are confounded by changing production prompts.
 LLMWho therefore also offers explicit active probes: small, versioned request
@@ -68,13 +68,12 @@ Import and `init()` must not inspect or prepare that runtime.
 
 There is no universal black-box procedure that can identify every unknown LLM
 from one answer. Providers can modify system prompts, sampling settings,
-quantization, output filters, and routing. LLMWho therefore returns candidates,
-confidence, and evidence rather than an unsupported definitive name.
-
-High-confidence evidence can include a conflicting response-declared model or
-a stable provider fingerprint with a known reference. Behavioral similarity is
-weaker evidence. Missing or contradictory evidence must result in `unknown` or
-low confidence.
+quantization, output filters, and routing. LLMWho therefore keeps provider
+declarations separate from identity. A response body can show that a provider
+declared another model, but cannot establish which weights actually ran.
+Identity candidates and confidence require an independent, versioned detector
+calibrated against known references and open-set unknowns. Without one,
+identity is `unknown`.
 
 ## Stability has separate layers
 

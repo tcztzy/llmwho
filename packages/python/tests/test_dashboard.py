@@ -21,7 +21,7 @@ class DashboardTests(unittest.TestCase):
                     url="https://api.example/v1/chat/completions",
                     duration_ms=15,
                     outcome="success",
-                    claimed_model="a",
+                    requested_model="a",
                     declared_model="a",
                     response={"status_code": 200, "output_bytes": 12},
                 )
@@ -39,7 +39,11 @@ class DashboardTests(unittest.TestCase):
                 self.assertEqual(summary["behavior"]["output_bytes_p50"], 12)
                 events = json.loads(urlopen(f"{base}/api/events?limit=1").read())
                 self.assertEqual(len(events), 1)
-                self.assertEqual(events[0]["identity"]["status"], "matched")
+                self.assertEqual(events[0]["identity"]["status"], "unknown")
+                self.assertEqual(
+                    events[0]["model_declaration"]["status"],
+                    "matched",
+                )
                 with self.assertRaises(HTTPError) as missing:
                     urlopen(f"{base}/missing")
                 self.assertEqual(missing.exception.code, 404)

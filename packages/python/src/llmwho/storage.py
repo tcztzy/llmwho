@@ -31,8 +31,9 @@ CREATE TABLE IF NOT EXISTS observations (
     endpoint_path TEXT NOT NULL,
     endpoint_provider TEXT,
     operation TEXT,
-    claimed_model TEXT,
-    observed_model TEXT,
+    requested_model TEXT,
+    declared_model TEXT,
+    declaration_status TEXT,
     outcome TEXT NOT NULL,
     duration_ms REAL NOT NULL,
     ttft_ms REAL,
@@ -44,7 +45,7 @@ CREATE INDEX IF NOT EXISTS observations_cohort_idx
     ON observations(
         endpoint_host,
         endpoint_path,
-        claimed_model,
+        requested_model,
         endpoint_provider,
         timestamp
     );
@@ -147,11 +148,21 @@ class SQLiteStore:
         )
         os.chmod(self.path, 0o600)
         with self._lock:
+            schema_version = self._connection.execute(
+                "PRAGMA user_version"
+            ).fetchone()[0]
+            if schema_version not in {0, 2}:
+                self._connection.close()
+                self._closed = True
+                raise RuntimeError(
+                    "unsupported Collector database schema; "
+                    "ObservationV2 requires a new database"
+                )
             self._connection.execute("PRAGMA journal_mode=WAL")
             self._connection.execute("PRAGMA synchronous=NORMAL")
             self._connection.execute("PRAGMA foreign_keys=ON")
             self._connection.executescript(_SCHEMA)
-            self._connection.execute("PRAGMA user_version=1")
+            self._connection.execute("PRAGMA user_version=2")
             self._protect_sidecars()
 
     def _protect_sidecars(self) -> None:
@@ -168,7 +179,7 @@ class SQLiteStore:
     def _row(event: dict[str, Any]) -> tuple[object, ...]:
         endpoint = event["endpoint"]
         request = event.get("request", {})
-        identity = event["identity"]
+        declaration = event.get("model_declaration", {})
         transport = event["transport"]
         return (
             event["event_id"],
@@ -183,8 +194,9 @@ class SQLiteStore:
             endpoint["path"],
             endpoint.get("provider"),
             request.get("operation"),
-            request.get("claimed_model"),
-            identity.get("observed_model"),
+            request.get("requested_model"),
+            declaration.get("declared_model"),
+            declaration.get("status"),
             transport["outcome"],
             float(transport["duration_ms"]),
             transport.get("ttft_ms"),
@@ -207,9 +219,9 @@ class SQLiteStore:
             INSERT OR IGNORE INTO observations (
                 event_id, timestamp, source, modality, sdk_name, sdk_version,
                 endpoint_scheme, endpoint_host, endpoint_port, endpoint_path,
-                endpoint_provider, operation, claimed_model, observed_model,
-                outcome, duration_ms, ttft_ms, event_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                endpoint_provider, operation, requested_model, declared_model,
+                declaration_status, outcome, duration_ms, ttft_ms, event_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         with self._lock:
             self._assert_open()

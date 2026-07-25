@@ -9,7 +9,6 @@ import { fileURLToPath } from "node:url";
 import * as llmwho from "../src/index.js";
 import {
   JSONLStore,
-  inferIdentity,
   newObservation,
   quantile,
   summarize,
@@ -25,8 +24,10 @@ test("legacy store name is removed", () => {
 });
 
 test("shared fixture is accepted", () => {
-  const fixture = JSON.parse(readFileSync(join(ROOT, "shared", "fixtures", "observation-v1.json")));
+  const fixture = JSON.parse(readFileSync(join(ROOT, "shared", "fixtures", "observation-v2.json")));
   validateObservation(fixture);
+  fixture.schema_version = "1";
+  assert.throws(() => validateObservation(fixture), /unsupported observation/);
 });
 
 test("URL and secrets are redacted", () => {
@@ -43,9 +44,22 @@ test("URL and secrets are redacted", () => {
   assert.equal(count, 2);
 });
 
-test("identity abstains without evidence", () => {
-  assert.deepEqual(inferIdentity("gpt-something").status, "unknown");
-  assert.deepEqual(inferIdentity("model-a", "model-b").status, "mismatch");
+test("provider declaration never becomes identity evidence", () => {
+  const event = newObservation({
+    url: "https://api.example.test/v1/chat/completions",
+    durationMs: 1,
+    outcome: "success",
+    requestedModel: "model-a",
+    declaredModel: "model-b",
+  });
+  assert.deepEqual(event.identity, { status: "unknown", candidates: [], evidence: [] });
+  assert.equal(event.model_declaration.status, "mismatch");
+  assert.deepEqual(event.model_declaration.evidence, [{
+    kind: "provider_declaration",
+    source: "response.body.model",
+    value: "model-b",
+  }]);
+  assert.equal("confidence" in event.identity, false);
 });
 
 test("store rejects raw content and round trips", () => {
@@ -54,7 +68,7 @@ test("store rejects raw content and round trips", () => {
     url: "https://api.example.test/v1/chat/completions?token=hidden",
     durationMs: 25,
     outcome: "success",
-    claimedModel: "model-a",
+    requestedModel: "model-a",
     declaredModel: "model-a",
     request: { operation: "chat.completions", input_bytes: 21 },
   });
@@ -70,7 +84,7 @@ test("V36: complete schema validation rejects unknown and malformed fields", () 
     url: "https://api.example.test/v1/chat/completions",
     durationMs: 25,
     outcome: "success",
-    claimedModel: "model-a",
+    requestedModel: "model-a",
     declaredModel: "model-a",
     response: { usage: { input_tokens: 1 } },
   });
@@ -105,12 +119,13 @@ test("summary keeps layers separate", () => {
     url: "https://api.example.test/v1/chat/completions",
     durationMs,
     outcome,
-    claimedModel: "a",
+    requestedModel: "a",
     declaredModel,
   }));
   const report = summarize(rows);
   assert.equal(report.availability.success_rate, 2 / 3);
   assert.equal(report.transport.latency_ms.p50, 20);
-  assert.deepEqual(report.identity.statuses, { matched: 2, unknown: 1 });
+  assert.deepEqual(report.identity.statuses, { unknown: 3 });
+  assert.deepEqual(report.declarations.statuses, { matched: 2, missing: 1 });
   assert.equal(quantile([0, 10], 0.95), 9.5);
 });

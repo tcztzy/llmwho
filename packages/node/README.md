@@ -93,11 +93,13 @@ npx llmwho dashboard
 ```
 
 The package provides ESM and CommonJS entry points plus TypeScript declarations.
-Identity results are probabilistic evidence, not cryptographic attestation.
-Version 0.4 uses the response body's declared `model` field and ignores
-undocumented model response headers; its smoke suite measures capability
-and does not uniquely identify arbitrary model weights. Raw prompts, responses,
-headers, query strings, and credentials are never stored.
+Version 0.4 records the response body's declared `model` field only as a
+provider declaration. It never turns that declaration into model identity or
+confidence. Identity remains `unknown` unless an independent calibrated
+detector supplies evidence. Undocumented model response headers are ignored;
+the smoke suite measures capability and does not uniquely identify arbitrary
+model weights. Raw prompts, responses, headers, query strings, and credentials
+are never stored.
 
 Full documentation, research review, and source:
 [github.com/tcztzy/llmwho](https://github.com/tcztzy/llmwho).

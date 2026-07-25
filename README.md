@@ -23,13 +23,13 @@ That call hooks supported HTTP paths in the current process. It does not add a
 proxy, change a base URL, wrap each client, or send synthetic traffic. Existing
 return values, exceptions, and streaming bodies stay under application control.
 
-> **Alpha honesty:** version 0.4 infers identity from the response body's
-> declared `model` field. Undocumented model response headers are ignored.
-> This provider-controlled signal can reveal accidental routing changes,
-> but a dishonest provider can forge them. The smoke probe measures endpoint
-> capability and consistency; it is not yet an LLMmap-style behavioral model
-> classifier. Identity conclusions remain evidence-backed and probabilistic;
-> every result can say `unknown`.
+> **Alpha honesty:** version 0.4 records the response body's declared `model`
+> field as a provider declaration, never as model identity or confidence.
+> Undocumented model response headers are ignored. Declaration mismatches can
+> reveal accidental routing changes, but a dishonest provider can forge both
+> matching and conflicting names. The smoke probe measures endpoint capability
+> and consistency; it is not an LLMmap-style behavioral model classifier.
+> Without an independent calibrated detector, identity remains `unknown`.
 
 LLMWho also exposes a Python science-plugin runtime for explicit analyses such
 as the output-affinity matrix. It is never started by passive hooks and its
@@ -120,9 +120,10 @@ const message = await client.messages.create({
 ```
 
 Direct `api.anthropic.com/v1/messages` observations normalize provider,
-operation, model, stream, role-count, byte-count, status, and token-usage
-fields. SDK streaming calls are observed without reading or cloning their
-response bodies.
+operation, requested model, stream, role-count, byte-count, provider
+declaration, status, and token-usage fields. The declaration is kept separate
+from identity. SDK streaming calls are observed without reading or cloning
+their response bodies.
 
 ### Claude Code and Codex project hooks
 
@@ -169,7 +170,7 @@ init({ endpoint: "https://gateway.example/internal/ai" });
 | Content capture | reserved | reserved | `LLMWHO_CAPTURE_CONTENT` reserved |
 
 Raw content capture is deliberately unavailable in 0.4 even if the reserved
-option is supplied. This keeps every `ObservationV1` portable and content-free.
+option is supplied. This keeps every `ObservationV2` portable and content-free.
 
 ## Self-hosted Collector
 
@@ -251,7 +252,8 @@ The dashboard deliberately keeps five layers separate:
 2. transport—latency distribution and tails;
 3. behavior—content-free response-size and streaming indicators;
 4. capability—judge-free active-probe results;
-5. identity—claimed/observed agreement, candidates, and unknown share.
+5. identity—independent detector candidates and unknown share; provider
+   declaration agreement is displayed separately.
 
 See [Stability model](docs/STABILITY.md) for the adaptation of continuous
 benchmark systems such as AI Stupid Level, and [Research landscape](docs/RESEARCH.md)
@@ -317,8 +319,9 @@ An event may include:
 
 - query-free endpoint scheme, host, port, and path;
 - operation, requested model, streaming flag, byte counts, and role count;
-- status, latency, usage, response-declared model, and system fingerprint;
-- identity candidates, confidence, and the evidence ledger;
+- status, latency, usage, provider-declared model, declaration agreement, and
+  system fingerprint;
+- identity candidates only when a versioned calibrated detector supplied them;
 - deterministic probe case ID, pass/fail, and score.
 
 It does **not** include raw prompts, messages, responses, request/response
@@ -328,7 +331,8 @@ successful response or the application's original exception.
 
 ## Limits and threat model
 
-- Response metadata is operational evidence, not cryptographic attestation.
+- Provider declarations are operational metadata, not identity evidence or
+  cryptographic attestation.
 - Capability similarity does not uniquely identify model weights.
 - A model name does not distinguish quantization, fine-tuning, system prompts,
   decoding settings, inference engines, regional routes, or mixed backends.

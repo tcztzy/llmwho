@@ -88,17 +88,17 @@ def _json_mapping(body: Any) -> tuple[dict[str, Any] | None, int]:
 
 def _request_metadata(payload: Mapping[str, Any] | None, size: int, path: str) -> tuple[dict, str | None]:
     metadata: dict[str, Any] = {"operation": _operation(path), "input_bytes": size}
-    claimed = None
+    requested = None
     if payload:
         if isinstance(payload.get("model"), str):
-            claimed = payload["model"]
-            metadata["claimed_model"] = claimed
+            requested = payload["model"]
+            metadata["requested_model"] = requested
         if isinstance(payload.get("stream"), bool):
             metadata["stream"] = payload["stream"]
         messages = payload.get("messages")
         if isinstance(messages, list):
             metadata["role_count"] = len(messages)
-    return metadata, claimed
+    return metadata, requested
 
 
 def _response_metadata(payload: Mapping[str, Any] | None, size: int, status_code: int) -> tuple[dict, str | None]:
@@ -107,7 +107,6 @@ def _response_metadata(payload: Mapping[str, Any] | None, size: int, status_code
     if payload:
         if isinstance(payload.get("model"), str):
             declared = payload["model"]
-            metadata["declared_model"] = declared
         if isinstance(payload.get("system_fingerprint"), str):
             metadata["system_fingerprint"] = payload["system_fingerprint"]
         usage = payload.get("usage")
@@ -133,10 +132,10 @@ def _normalized_request_metadata(
     url: str, payload: Mapping[str, Any] | None, size: int
 ) -> tuple[dict[str, Any], str | None, str | None]:
     if is_anthropic_messages_url(url):
-        metadata, claimed = anthropic_request_metadata(payload, size)
-        return metadata, claimed, ANTHROPIC_PROVIDER
-    metadata, claimed = _request_metadata(payload, size, urlsplit(url).path)
-    return metadata, claimed, None
+        metadata, requested = anthropic_request_metadata(payload, size)
+        return metadata, requested, ANTHROPIC_PROVIDER
+    metadata, requested = _request_metadata(payload, size, urlsplit(url).path)
+    return metadata, requested, None
 
 
 def _normalized_response_metadata(
@@ -236,7 +235,7 @@ def _install_httpx(handle: HookHandle, module: Any) -> None:
             return sync_original(client, request, *args, **kwargs)
         started = perf_counter()
         request_payload, request_size = _httpx_body(request)
-        request_meta, claimed, provider = _normalized_request_metadata(
+        request_meta, requested, provider = _normalized_request_metadata(
             url, request_payload, request_size
         )
         redactions = _redaction_count(url, request.headers)
@@ -248,7 +247,7 @@ def _install_httpx(handle: HookHandle, module: Any) -> None:
                 duration_ms=(perf_counter() - started) * 1000,
                 outcome=_exception_outcome(error),
                 provider=provider,
-                claimed_model=claimed,
+                requested_model=requested,
                 request=request_meta,
                 redactions=redactions,
             )
@@ -262,7 +261,7 @@ def _install_httpx(handle: HookHandle, module: Any) -> None:
             duration_ms=(perf_counter() - started) * 1000,
             outcome=_outcome(response.status_code),
             provider=provider,
-            claimed_model=claimed,
+            requested_model=requested,
             declared_model=declared,
             request=request_meta,
             response=response_meta,
@@ -280,7 +279,7 @@ def _install_httpx(handle: HookHandle, module: Any) -> None:
             return await async_original(client, request, *args, **kwargs)
         started = perf_counter()
         request_payload, request_size = _httpx_body(request)
-        request_meta, claimed, provider = _normalized_request_metadata(
+        request_meta, requested, provider = _normalized_request_metadata(
             url, request_payload, request_size
         )
         redactions = _redaction_count(url, request.headers)
@@ -292,7 +291,7 @@ def _install_httpx(handle: HookHandle, module: Any) -> None:
                 duration_ms=(perf_counter() - started) * 1000,
                 outcome=_exception_outcome(error),
                 provider=provider,
-                claimed_model=claimed,
+                requested_model=requested,
                 request=request_meta,
                 redactions=redactions,
             )
@@ -306,7 +305,7 @@ def _install_httpx(handle: HookHandle, module: Any) -> None:
             duration_ms=(perf_counter() - started) * 1000,
             outcome=_outcome(response.status_code),
             provider=provider,
-            claimed_model=claimed,
+            requested_model=requested,
             declared_model=declared,
             request=request_meta,
             response=response_meta,
@@ -326,7 +325,7 @@ def _install_requests(handle: HookHandle, module: Any) -> None:
             return original(session, request, **kwargs)
         started = perf_counter()
         request_payload, request_size = _json_mapping(request.body)
-        request_meta, claimed, provider = _normalized_request_metadata(
+        request_meta, requested, provider = _normalized_request_metadata(
             url, request_payload, request_size
         )
         redactions = _redaction_count(url, request.headers)
@@ -338,7 +337,7 @@ def _install_requests(handle: HookHandle, module: Any) -> None:
                 duration_ms=(perf_counter() - started) * 1000,
                 outcome=_exception_outcome(error),
                 provider=provider,
-                claimed_model=claimed,
+                requested_model=requested,
                 request=request_meta,
                 redactions=redactions,
             )
@@ -355,7 +354,7 @@ def _install_requests(handle: HookHandle, module: Any) -> None:
             duration_ms=(perf_counter() - started) * 1000,
             outcome=_outcome(response.status_code),
             provider=provider,
-            claimed_model=claimed,
+            requested_model=requested,
             declared_model=declared,
             request=request_meta,
             response=response_meta,
@@ -387,7 +386,7 @@ def init(
     """Install one process-wide passive hook layer and return its handle.
 
     Importing LLMWho and calling ``init`` never sends network traffic. The
-    ``capture_content`` option is reserved; ObservationV1 remains content-free
+    ``capture_content`` option is reserved; ObservationV2 remains content-free
     even when callers pass it in this release.
     """
 

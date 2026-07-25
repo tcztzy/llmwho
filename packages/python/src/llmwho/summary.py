@@ -23,11 +23,14 @@ def summarize(events: Iterable[dict]) -> dict:
     rows = list(events)
     outcomes = Counter(row["transport"]["outcome"] for row in rows)
     identities = Counter(row["identity"]["status"] for row in rows)
+    declarations = Counter(
+        row.get("model_declaration", {}).get("status", "missing") for row in rows
+    )
     durations = [float(row["transport"]["duration_ms"]) for row in rows]
-    observed = Counter(
-        row["identity"]["observed_model"]
+    declared = Counter(
+        row["model_declaration"]["declared_model"]
         for row in rows
-        if row["identity"].get("observed_model")
+        if row.get("model_declaration")
     )
     probe_rows = [row for row in rows if row.get("probe")]
     probe_scores = [float(row["probe"]["score"]) for row in probe_rows]
@@ -55,7 +58,10 @@ def summarize(events: Iterable[dict]) -> dict:
         },
         "identity": {
             "statuses": dict(sorted(identities.items())),
-            "observed_models": dict(sorted(observed.items())),
+        },
+        "declarations": {
+            "statuses": dict(sorted(declarations.items())),
+            "declared_models": dict(sorted(declared.items())),
         },
         "behavior": {
             "observed_responses": len(output_sizes),

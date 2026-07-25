@@ -14,7 +14,7 @@ test("dashboard serves shared UI, layered summary, and events", async () => {
     url: "https://api.example/v1/chat/completions",
     durationMs: 15,
     outcome: "success",
-    claimedModel: "a",
+    requestedModel: "a",
     declaredModel: "a",
     response: { status_code: 200, output_bytes: 12 },
   }));
@@ -32,7 +32,8 @@ test("dashboard serves shared UI, layered summary, and events", async () => {
     assert.equal(summary.behavior.output_bytes_p50, 12);
     const events = await (await fetch(`${base}/api/events?limit=1`)).json();
     assert.equal(events.length, 1);
-    assert.equal(events[0].identity.status, "matched");
+    assert.equal(events[0].identity.status, "unknown");
+    assert.equal(events[0].model_declaration.status, "matched");
     assert.equal((await fetch(`${base}/missing`)).status, 404);
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));

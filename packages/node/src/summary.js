@@ -21,8 +21,11 @@ export function summarize(events) {
   const rows = [...events];
   const outcomes = counts(rows.map((row) => row.transport.outcome));
   const statuses = counts(rows.map((row) => row.identity.status));
-  const observedModels = counts(
-    rows.map((row) => row.identity.observed_model).filter(Boolean),
+  const declarationStatuses = counts(
+    rows.map((row) => row.model_declaration?.status ?? "missing"),
+  );
+  const declaredModels = counts(
+    rows.map((row) => row.model_declaration?.declared_model).filter(Boolean),
   );
   const durations = rows.map((row) => Number(row.transport.duration_ms));
   const probeScores = rows.filter((row) => row.probe).map((row) => Number(row.probe.score));
@@ -42,7 +45,11 @@ export function summarize(events) {
         p99: quantile(durations, 0.99),
       },
     },
-    identity: { statuses, observed_models: observedModels },
+    identity: { statuses },
+    declarations: {
+      statuses: declarationStatuses,
+      declared_models: declaredModels,
+    },
     behavior: {
       observed_responses: outputSizes.length,
       stream_requests: rows.filter((row) => row.request?.stream === true).length,

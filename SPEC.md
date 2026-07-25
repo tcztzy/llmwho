@@ -16,6 +16,7 @@
 - `init()`/module import/npm lifecycle scripts ⊥ `uv` discovery, Python setup, child process, download
 - executable science plugins require explicit package configuration; reference profiles remain versioned data, ⊥ executable code
 - identity result probabilistic; uncertainty/`unknown` first-class; ⊥ unsupported certainty claims
+- provider declaration ≠ model identity; passive declaration agreement never yields identity candidate/confidence
 - Python `>=3.10`; Node `>=18`; TypeScript declarations + ESM/CJS outputs
 - optional HTTP libraries remain optional imports
 - OpenAI-compatible transport first; passive generic detection for known LLM routes
@@ -48,11 +49,11 @@
 - cli: `llmwho database import-jsonl|export-jsonl --database PATH --jsonl PATH`
 - cli: `llmwho probe --base-url URL --model ID [--api-key-env NAME] [--suite smoke]`
 - js-cli: `npx llmwho summary|dashboard|probe ...`
-- event: JSONL `ObservationV1` with `schema_version="1"`, timestamp, SDK, endpoint, transport, identity, behavior, privacy fields
-- anthropic: passive py/js hooks recognize direct `POST /v1/messages`; normalize `endpoint.provider="anthropic"`, `request.operation="messages"`, claimed model, stream, role count, byte counts, declared model, status, and input/output/total token usage; stream body ⊥ read/clone
+- event: JSONL `ObservationV2` with `schema_version="2"`, timestamp, SDK, endpoint, request, provider declaration, identity, transport, behavior, privacy fields
+- anthropic: passive py/js hooks recognize direct `POST /v1/messages`; normalize `endpoint.provider="anthropic"`, `request.operation="messages"`, requested model, stream, role count, byte counts, provider-declared model, declaration status/evidence, status, and input/output/total token usage; stream body ⊥ read/clone
 - agent-hook-cli: `llmwho hook claude-code|codex [--event EVENT] [--storage PATH]` reads one official lifecycle-hook JSON object from stdin; project `.claude/settings.json` / `.codex/hooks.json` configs emit content-free passive turn observations
-- dashboard: local `GET /`, `GET /api/summary`, `GET /api/events`
-- collector: `GET /api/health`, `GET /api/summary`, `GET /api/events`; `POST /api/v1/observations`; OTLP/HTTP JSON `POST /v1/logs`
+- dashboard: local `GET /`, `GET /api/summary?since=&until=&endpoint_host=&endpoint_path=&provider=&requested_model=`, `GET /api/events?...&limit=&cursor=`; events response `{events,next_cursor}`
+- collector: `GET /api/health`, windowed/cohort `GET /api/summary`, cursor-paged `GET /api/events`; `POST /api/v1/observations`; OTLP/HTTP JSON `POST /v1/logs`
 - store: Python `SQLiteStore(path)` + Python/Node `RemoteStore(url, token=...)`; `append`, `read`, `close`
 - env: `LLMWHO_STORAGE`, `LLMWHO_CAPTURE_CONTENT`, `LLMWHO_DISABLED`, `LLMWHO_COLLECTOR_URL`, `LLMWHO_COLLECTOR_TOKEN`, `LLMWHO_COLLECTOR_PROTOCOL`
 
@@ -62,8 +63,8 @@ V2: ∀ recorded header/url/body/error → credentials & auth query values redac
 V3: default `capture_content=False` → raw request/response content ⊥ persistence
 V4: passive hook → preserve return value, streaming semantics, status, exception type; telemetry failure ⊥ break app request
 V5: `init()` ⊥ active network; only `probe()`/probe CLI sends synthetic requests
-V6: identity inference → evidence list + confidence + candidates; insufficient evidence → `unknown`
-V7: Python & JS events validate same `ObservationV1` field contract
+V6: identity inference → versioned detector evidence + candidate confidence; insufficient/uncalibrated evidence → `unknown`
+V7: Python & JS events validate same `ObservationV2` field contract
 V8: timeout/HTTP error/stream error remain first-class stability outcomes; ⊥ drop failed trials
 V9: dashboard keeps availability, transport, behavior, capability, identity distinct; aggregate score ⊥ hide components
 V10: summary quantiles deterministic & small-sample safe
@@ -78,7 +79,7 @@ V18: published npm/PyPI artifacts version match git tag & expose §I interfaces
 V19: direct Anthropic Messages observations → same normalized Python/JS fields; when both counts exist `total_tokens=input_tokens+output_tokens`; malformed/absent metadata omitted
 V20: Claude Code/Codex hook adapter → exit 0 & protocol-neutral stdout despite malformed input/telemetry failure; ⊥ network, transcript read, prompt/response/tool content, session/turn IDs persistence
 V21: hook state → hashed session filename + safe model/start time/input byte count only; Python/JS turn event parity for provider, operation, model, duration, outcome, input/output bytes, privacy
-V22: default identity inference → response body `model` only; undocumented model headers → no evidence
+V22: response body `model` → provider declaration only; undocumented model headers → no evidence
 V23: output-affinity metric → normalized UTF-16 character n-grams + pooled-background interpolation + averaged bidirectional KL in bits; diagonal `0`; deterministic
 V24: output-affinity Python/Node reports numerically agree; input corpora ⊥ network, persistence, observation events
 V25: output-affinity report exposes corpus/sample/config metadata; labels result style divergence, ⊥ identity/distillation proof
@@ -92,14 +93,18 @@ V32: release tag = `v` + Python/npm/module version; CI tests/builds/smoke-instal
 V33: npm tarball publish uses explicit `./` filesystem spec; partial registry recovery rebuilds from immutable tag, publishes only selected missing registry, verifies same version exists on PyPI/npm before GitHub Release
 V34: SQLite Collector store → WAL + `event_id` uniqueness + deterministic timestamp order; duplicate ingest idempotent; only Collector writes shared DB
 V35: shared DB schema → observations, probe runs, analysis results, alerts, reference profiles; records append-only; JSONL only import/export/local spool
-V36: native/OTLP Collector ingest validates complete `ObservationV1` before persistence; raw content/secret/invalid event → reject entire request, persist none
+V36: native/OTLP Collector ingest validates complete `ObservationV2` before persistence; raw content/secret/invalid event → reject entire request, persist none
 V37: Collector binds loopback by default; non-loopback → explicit bearer token; compare constant-time; token ∉ persistence/log/error body
-V38: OTLP/HTTP JSON log mapping carries content-free `ObservationV1`; unsupported encoding → explicit 415; unknown OTLP fields ignored
+V38: OTLP/HTTP JSON log mapping carries content-free `ObservationV2`; unsupported encoding → explicit 415; unknown OTLP fields ignored
 V39: Python/Node remote sink → bounded non-blocking delivery, uninstrumented transport, fail-open host request, best-effort flush on shutdown; disabled/unconfigured → local JSONL
 V40: Python/Node Collector config and wire payload parity; auth uses `Authorization: Bearer`; credentials ∉ events
 V41: Collector dashboard reads same SQLite repository as ingest and polls live; availability/transport/behavior/capability/identity separation preserved
 V42: v0.4 deployable as one Python process/container; `collector` includes ingest + dashboard; no external runtime dependency beyond Python stdlib
 V43: Collector SQLite database/WAL/SHM + JSONL export → owner-only `0600` despite permissive process umask
+V44: provider-controlled declaration → declaration status/evidence only; ⊥ identity candidate/confidence; no independent calibrated detector → identity `unknown`
+V45: Collector summary defaults bounded 24h; cohort filters use indexed columns; summary ⊥ deserialize `event_json`; event pages deterministic, bounded, cursor-disjoint
+V46: release CI builds non-root container, verifies health/auth/data API; protected `main` requires pull request + required CI before release tag
+V47: v0.4 event boundary = intentional `ObservationV2` break; producers/Collector reject `schema_version!="2"`; ⊥ V1 compatibility path
 
 ## §T TASKS
 id|status|task|cites
@@ -126,6 +131,9 @@ T20|x|implement authenticated Collector native + OTLP ingest, shared dashboard/q
 T21|x|implement bounded fail-open Python/Node remote sinks, init/env config, shutdown flush, parity tests|V1,V2,V3,V4,V5,V7,V13,V39,V40,I.py,I.js,I.store
 T22|x|ship all-in-one container, live Collector docs/tutorial/security guidance, contract tests|V2,V3,V9,V16,V37,V41,V42
 T23|x|bump v0.4 versions; run Python/Node lint, type, test, build, install, repository gates|V17,V18,V32,V33,V42,V43
+T24|x|replace provider-declaration identity confidence with breaking ObservationV2 declaration semantics across Python/Node/docs|V6,V7,V19,V20,V21,V22,V44,V47,I.event,I.anthropic
+T25|.|implement bounded indexed Collector summary + cohort filters + cursor event pages; update dashboard|V9,V10,V34,V41,V45,I.dashboard,I.collector
+T26|.|add container CI smoke + protected-main release gate; document maintainer setup|V17,V32,V42,V46
 
 ## §B BUGS
 id|date|cause|fix
@@ -143,3 +151,6 @@ B11|2026-07-22|container verifier overmounted owned `/data` with root-owned tmpf
 B12|2026-07-22|runtime validator checked core fields but not full shared-schema keys/types at Collector boundary|enforce complete Python/Node `ObservationV1` shape and add V36 parity tests; no new invariant
 B13|2026-07-22|SQLite creation inherited process umask and could expose operational metadata to group/others|V43
 B14|2026-07-22|local release verifier left `uv run` then assumed a system `python` executable|run repository contracts inside explicit uv environment; no new invariant
+B15|2026-07-25|provider-controlled `response.body.model` received arbitrary `0.98` identity confidence|V44,V47
+B16|2026-07-25|Collector dashboard poll read/deserialized/sorted full observation history every 5s|V45
+B17|2026-07-25|container deliverable had no CI runtime smoke and `main` accepted unguarded release commits|V46

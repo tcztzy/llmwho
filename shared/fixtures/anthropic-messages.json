@@ -30,14 +30,13 @@
   "expected_request": {
     "operation": "messages",
     "input_bytes": 311,
-    "claimed_model": "claude-sonnet-4-20250514",
+    "requested_model": "claude-sonnet-4-20250514",
     "stream": false,
     "role_count": 2
   },
   "expected_response": {
     "status_code": 200,
     "output_bytes": 257,
-    "declared_model": "claude-sonnet-4-20250514",
     "usage": {
       "input_tokens": 13,
       "output_tokens": 7,

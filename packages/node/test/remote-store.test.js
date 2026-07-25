@@ -25,7 +25,7 @@ function event(identifier = "event-1") {
     url: "https://api.example/v1/chat/completions",
     durationMs: 5,
     outcome: "success",
-    claimedModel: "model",
+    requestedModel: "model",
     declaredModel: "model",
   });
   value.event_id = identifier;
@@ -137,7 +137,7 @@ test("Python and Node OTLP mapping fields remain semantically aligned", () => {
     record.attributes.map(({ key, value }) => [key, value.stringValue]),
     [
       ["llmwho.event.type", "observation"],
-      ["llmwho.schema.version", "1"],
+      ["llmwho.schema.version", "2"],
     ],
   );
   assert.equal(JSON.parse(record.body.stringValue).event_id, "wire");
