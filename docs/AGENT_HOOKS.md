@@ -10,7 +10,7 @@ llmwho hook codex --event Stop
 
 Do not invoke these commands manually. Claude Code or Codex sends one JSON
 object on stdin. LLMWho returns without changing agent decisions, appends a
-content-free `ObservationV1` when a turn ends, and never sends network traffic.
+content-free `ObservationV2` when a turn ends, and never sends network traffic.
 
 ## Install and configure
 
@@ -61,7 +61,8 @@ disable recording without editing hook configuration.
 | Outcome | success, timeout, or HTTP error | success |
 | Input size | Prompt UTF-8 byte count only | Prompt UTF-8 byte count only |
 | Output size | UTF-8 byte count only | UTF-8 byte count only |
-| Identity | claimed model with `unknown` status | claimed model with `unknown` status |
+| Requested model | safe model slug | safe model slug |
+| Identity | `unknown`; no independent detector | `unknown`; no independent detector |
 
 Hook invocations are separate processes. LLMWho correlates them with a small
 state file next to the JSONL store under `.hook-state/`. The filename is a

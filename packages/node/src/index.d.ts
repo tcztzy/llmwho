@@ -1,6 +1,6 @@
 export type TransportOutcome = "success" | "http_error" | "timeout" | "network_error" | "stream_error";
-export interface ObservationV1 {
-  schema_version: "1";
+export interface ObservationV2 {
+  schema_version: "2";
   event_id: string;
   timestamp: string;
   source: "passive" | "probe";
@@ -8,13 +8,25 @@ export interface ObservationV1 {
   sdk: { name: string; version: string };
   endpoint: { scheme: "http" | "https" | "unknown"; host: string; port?: number; path: string; provider?: string };
   transport: { outcome: TransportOutcome; duration_ms: number; ttft_ms?: number; error_type?: string };
+  model_declaration?: {
+    status: "matched" | "mismatch" | "unverified";
+    declared_model: string;
+    evidence: Array<{
+      kind: "provider_declaration";
+      source: "response.body.model";
+      value: string;
+    }>;
+  };
   identity: {
-    status: "matched" | "mismatch" | "unknown";
-    claimed_model?: string;
-    observed_model?: string;
-    confidence: number;
+    status: "unknown" | "inferred";
     candidates: Array<{ label: string; confidence: number }>;
-    evidence: Array<{ kind: string; source: string; value?: string; weight: number }>;
+    evidence: Array<{
+      kind: string;
+      source: string;
+      value?: string;
+      detector_id: string;
+      detector_version: string;
+    }>;
   };
   privacy: { content_captured: false; redactions: number };
   request?: Record<string, unknown>;
@@ -27,9 +39,12 @@ export interface InitOptions {
   storagePath?: string;
   captureContent?: boolean;
   endpoint?: string | ((url: string) => boolean);
+  collectorUrl?: string;
+  collectorToken?: string;
+  collectorProtocol?: "native" | "otlp";
 }
 export class HookHandle {
-  readonly store: JSONLStore;
+  readonly store: JSONLStore | RemoteStore;
   readonly endpoint?: InitOptions["endpoint"];
   readonly captureContent: false;
   active: boolean;
@@ -46,21 +61,21 @@ export interface ProbeOptions {
   fetchImpl?: typeof fetch;
 }
 export interface ProbeReport {
-  schema_version: "1";
+  schema_version: "2";
   suite: "smoke";
   model: string;
-  endpoint: ObservationV1["endpoint"];
+  endpoint: ObservationV2["endpoint"];
   started_at: string;
   completed_at: string;
   completed: boolean;
   capability: { passed: number; total: number; mean_score: number };
-  identity: { statuses: Record<string, number>; observed_models: Record<string, number> };
+  declarations: { statuses: Record<string, number>; declared_models: Record<string, number> };
+  identity: ObservationV2["identity"];
   cases: Array<Record<string, unknown>>;
 }
 export function probe(options: ProbeOptions): Promise<ProbeReport>;
-export function inferIdentity(claimedModel?: string, declaredModel?: string): ObservationV1["identity"];
-export function newObservation(options: Record<string, unknown>): ObservationV1;
-export function validateObservation(event: ObservationV1): void;
+export function newObservation(options: Record<string, unknown>): ObservationV2;
+export function validateObservation(event: ObservationV2): void;
 export interface OutputAffinityOptions {
   ngramSize?: number;
   modelWeight?: number;
@@ -144,8 +159,35 @@ export const science: ScienceRuntimeManager;
 export class JSONLStore {
   constructor(path?: string);
   path: string;
-  append(event: ObservationV1): void;
-  read(limit?: number): ObservationV1[];
+  append(event: ObservationV2): void;
+  read(limit?: number): ObservationV2[];
+  close(): void;
 }
+export interface RemoteStoreOptions {
+  token?: string;
+  protocol?: "native" | "otlp";
+  maxQueue?: number;
+  batchSize?: number;
+  flushIntervalMs?: number;
+  requestTimeoutMs?: number;
+  fetchImpl?: typeof fetch;
+}
+export class RemoteStore {
+  constructor(url: string, options?: RemoteStoreOptions);
+  readonly url: string;
+  readonly protocol: "native" | "otlp";
+  readonly endpoint: string;
+  readonly maxQueue: number;
+  readonly batchSize: number;
+  closed: boolean;
+  dropped: number;
+  deliveryFailures: number;
+  delivered: number;
+  append(event: ObservationV2): boolean;
+  flush(): Promise<void>;
+  read(limit?: number): Promise<ObservationV2[]>;
+  close(options?: { timeoutMs?: number }): Promise<boolean>;
+}
+export function otlpLogsPayload(events: ObservationV2[]): Record<string, unknown>;
 export function quantile(values: number[], probability: number): number | null;
-export function summarize(events: ObservationV1[]): Record<string, unknown>;
+export function summarize(events: ObservationV2[]): Record<string, unknown>;

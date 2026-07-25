@@ -23,6 +23,23 @@ def _parser() -> argparse.ArgumentParser:
     dashboard.add_argument("--host", default="127.0.0.1")
     dashboard.add_argument("--port", default=7734, type=int)
 
+    collector = commands.add_parser(
+        "collector", help="run the self-hosted Collector and live dashboard"
+    )
+    collector.add_argument("--database", help="SQLite database path")
+    collector.add_argument("--host", default="127.0.0.1")
+    collector.add_argument("--port", default=7734, type=int)
+    collector.add_argument("--token-env", default="LLMWHO_COLLECTOR_TOKEN")
+
+    database = commands.add_parser(
+        "database", help="import or export Collector observations"
+    )
+    database_commands = database.add_subparsers(dest="database_command", required=True)
+    for action in ("import-jsonl", "export-jsonl"):
+        command = database_commands.add_parser(action)
+        command.add_argument("--database", required=True)
+        command.add_argument("--jsonl", required=True)
+
     probe = commands.add_parser("probe", help="run an explicit active probe suite")
     probe.add_argument("--base-url", required=True)
     probe.add_argument("--model", required=True)
@@ -60,6 +77,27 @@ def main(argv: Sequence[str] | None = None) -> int:
         from .dashboard import serve_dashboard
 
         serve_dashboard(storage_path=args.storage, host=args.host, port=args.port)
+        return 0
+    if args.command == "collector":
+        import os
+        from .collector import serve_collector
+
+        serve_collector(
+            database_path=args.database,
+            host=args.host,
+            port=args.port,
+            token=os.environ.get(args.token_env),
+        )
+        return 0
+    if args.command == "database":
+        from .storage import SQLiteStore
+
+        with SQLiteStore(args.database) as store:
+            if args.database_command == "import-jsonl":
+                report = store.import_jsonl(args.jsonl)
+            else:
+                report = {"exported": store.export_jsonl(args.jsonl)}
+        print(json.dumps(report, ensure_ascii=False, sort_keys=True))
         return 0
     if args.command == "probe":
         import os

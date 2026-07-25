@@ -51,7 +51,7 @@ already going to send. It can capture:
 - safe response headers and system fingerprints;
 - status, error category, retry evidence, latency, and streaming completion;
 - token counts and derived output characteristics;
-- changes in identity evidence across time.
+- changes in provider declarations across time.
 
 Passive observations alone are confounded by changing production prompts.
 LLMWho therefore also offers explicit active probes: small, versioned request
@@ -68,13 +68,12 @@ Import and `init()` must not inspect or prepare that runtime.
 
 There is no universal black-box procedure that can identify every unknown LLM
 from one answer. Providers can modify system prompts, sampling settings,
-quantization, output filters, and routing. LLMWho therefore returns candidates,
-confidence, and evidence rather than an unsupported definitive name.
-
-High-confidence evidence can include a conflicting response-declared model or
-a stable provider fingerprint with a known reference. Behavioral similarity is
-weaker evidence. Missing or contradictory evidence must result in `unknown` or
-low confidence.
+quantization, output filters, and routing. LLMWho therefore keeps provider
+declarations separate from identity. A response body can show that a provider
+declared another model, but cannot establish which weights actually ran.
+Identity candidates and confidence require an independent, versioned detector
+calibrated against known references and open-set unknowns. Without one,
+identity is `unknown`.
 
 ## Stability has separate layers
 
@@ -98,9 +97,11 @@ API keys, signed query parameters, cookies, and equivalent credentials are
 never recorded. Derived features should be calculated in-process before raw
 content is discarded. Telemetry failures must never break the host request.
 
-The MVP is local-first. Its dashboard binds to loopback and reads a portable
-JSONL event stream. Teams can later provide remote sinks without forcing a
-hosted service on individual developers.
+The zero-configuration path remains local-first and writes a portable JSONL
+event stream. Version 0.4 adds an optional self-hosted Collector that owns a
+shared SQLite data layer and live dashboard. It binds loopback by default;
+remote deployment is explicit, authenticated, and never required for an
+individual developer.
 
 ## Scope
 
@@ -122,3 +123,5 @@ new telemetry foundation.
 - Published npm and PyPI packages expose matching concepts and event fields.
 - Python and Node science calls execute the same versioned Python plugins and
   report plugin identity, evidence, limitations, and protocol version.
+- An administrator can deploy one Collector process, point both SDKs at it,
+  and observe the same content-free events through its live dashboard.

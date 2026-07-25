@@ -56,17 +56,19 @@ export const SMOKE_CASES = [
   },
 ];
 
-function identityRollup(events) {
+function declarationRollup(events) {
   const statuses = {};
-  const observedModels = {};
+  const declaredModels = {};
   for (const event of events) {
-    const identity = event.identity;
-    statuses[identity.status] = (statuses[identity.status] ?? 0) + 1;
-    if (identity.observed_model) {
-      observedModels[identity.observed_model] = (observedModels[identity.observed_model] ?? 0) + 1;
+    const declaration = event.model_declaration;
+    const status = declaration?.status ?? "missing";
+    statuses[status] = (statuses[status] ?? 0) + 1;
+    if (declaration) {
+      const declared = declaration.declared_model;
+      declaredModels[declared] = (declaredModels[declared] ?? 0) + 1;
     }
   }
-  return { statuses, observed_models: observedModels };
+  return { statuses, declared_models: declaredModels };
 }
 
 export async function probe({
@@ -149,7 +151,6 @@ export async function probe({
     const declaredModel = typeof responsePayload?.model === "string" ? responsePayload.model : undefined;
     const response = { output_bytes: outputBytes };
     if (statusCode !== undefined) response.status_code = statusCode;
-    if (declaredModel) response.declared_model = declaredModel;
     if (typeof responsePayload?.system_fingerprint === "string") {
       response.system_fingerprint = responsePayload.system_fingerprint;
     }
@@ -158,11 +159,11 @@ export async function probe({
       durationMs,
       outcome,
       source: "probe",
-      claimedModel: model,
+      requestedModel: model,
       declaredModel,
       request: {
         operation: "chat.completions",
-        claimed_model: model,
+        requested_model: model,
         stream: false,
         input_bytes: Buffer.byteLength(body),
         role_count: 2,
@@ -190,12 +191,13 @@ export async function probe({
       outcome,
       status_code: statusCode ?? null,
       duration_ms: durationMs,
+      model_declaration: event.model_declaration,
       identity: event.identity,
     });
   }
 
   return {
-    schema_version: "1",
+    schema_version: "2",
     suite: "smoke",
     model,
     endpoint: events[0].endpoint,
@@ -207,7 +209,8 @@ export async function probe({
       total: cases.length,
       mean_score: cases.reduce((sum, item) => sum + item.score, 0) / cases.length,
     },
-    identity: identityRollup(events),
+    declarations: declarationRollup(events),
+    identity: { status: "unknown", candidates: [], evidence: [] },
     cases,
   };
 }

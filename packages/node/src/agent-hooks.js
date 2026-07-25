@@ -154,10 +154,10 @@ export function observeHookEvent(client, payload, {
   }
   if (!["Stop", "StopFailure"].includes(eventName)) return undefined;
 
-  const claimedModel = model ?? safeModel(state.model);
+  const requestedModel = model ?? safeModel(state.model);
   const request = { operation: "agent.turn" };
   if (Number.isSafeInteger(state.input_bytes)) request.input_bytes = state.input_bytes;
-  if (claimedModel) request.claimed_model = claimedModel;
+  if (requestedModel) request.requested_model = requestedModel;
 
   let response;
   let outcome = "success";
@@ -177,7 +177,7 @@ export function observeHookEvent(client, payload, {
     outcome,
     errorType,
     provider: config.provider,
-    claimedModel,
+    requestedModel,
     request,
     response,
   });

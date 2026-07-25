@@ -35,19 +35,19 @@ def request_metadata(
         "operation": MESSAGES_OPERATION,
         "input_bytes": max(0, size),
     }
-    claimed = None
+    requested = None
     if payload:
         model = payload.get("model")
         if isinstance(model, str):
-            claimed = model
-            metadata["claimed_model"] = model
+            requested = model
+            metadata["requested_model"] = model
         stream = payload.get("stream")
         if isinstance(stream, bool):
             metadata["stream"] = stream
         messages = payload.get("messages")
         if isinstance(messages, list):
             metadata["role_count"] = len(messages)
-    return metadata, claimed
+    return metadata, requested
 
 
 def response_metadata(
@@ -66,7 +66,6 @@ def response_metadata(
     model = payload.get("model")
     if isinstance(model, str):
         declared = model
-        metadata["declared_model"] = model
 
     raw_usage = payload.get("usage")
     if isinstance(raw_usage, Mapping):

@@ -45,7 +45,8 @@ test("smoke probe is deterministic and content-free", async () => {
       storagePath: path,
     });
     assert.deepEqual(report.capability, { passed: 4, total: 4, mean_score: 1 });
-    assert.deepEqual(report.identity.statuses, { mismatch: 4 });
+    assert.deepEqual(report.declarations.statuses, { mismatch: 4 });
+    assert.equal(report.identity.status, "unknown");
     assert.deepEqual(authorizations, Array(4).fill("Bearer probe-secret"));
     const persisted = readFileSync(path, "utf8");
     assert.equal(persisted.includes("probe-secret"), false);
@@ -85,10 +86,12 @@ test("V22: undocumented model response headers are ignored", async () => {
       model: "client-model",
       storagePath: path,
     });
-    assert.deepEqual(report.identity.statuses, { unknown: 4 });
-    assert.deepEqual(report.identity.observed_models, {});
+    assert.deepEqual(report.declarations.statuses, { missing: 4 });
+    assert.deepEqual(report.declarations.declared_models, {});
+    assert.equal(report.identity.status, "unknown");
     const events = readFileSync(path, "utf8").trim().split("\n").map(JSON.parse);
     assert.equal(events.every((event) => event.identity.evidence.length === 0), true);
+    assert.equal(events.every((event) => !("model_declaration" in event)), true);
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }

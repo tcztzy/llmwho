@@ -1,39 +1,32 @@
-"""Conservative identity inference from provider-declared metadata."""
+"""Keep provider declarations separate from model identity."""
 
-def infer_identity(
-    claimed_model: str | None = None,
+
+def provider_declaration(
+    requested_model: str | None = None,
     declared_model: str | None = None,
-) -> dict:
-    """Build an evidence ledger from the response-declared model."""
+) -> dict | None:
+    """Describe what provider declared without treating it as identity evidence."""
 
-    evidence = []
-    observed = declared_model or None
-    weight = 0.0
-    if declared_model:
-        weight = 0.98
-        evidence.append(
+    if not declared_model:
+        return None
+    if requested_model:
+        status = "matched" if declared_model == requested_model else "mismatch"
+    else:
+        status = "unverified"
+    return {
+        "status": status,
+        "declared_model": declared_model,
+        "evidence": [
             {
-                "kind": "response_model",
+                "kind": "provider_declaration",
                 "source": "response.body.model",
                 "value": declared_model,
-                "weight": weight,
             }
-        )
-    if observed and claimed_model:
-        status = "matched" if observed == claimed_model else "mismatch"
-        confidence = weight
-    else:
-        status = "unknown"
-        confidence = weight if observed else 0.0
-
-    result = {
-        "status": status,
-        "confidence": confidence,
-        "candidates": ([{"label": observed, "confidence": weight}] if observed else []),
-        "evidence": evidence,
+        ],
     }
-    if claimed_model:
-        result["claimed_model"] = claimed_model
-    if observed:
-        result["observed_model"] = observed
-    return result
+
+
+def unknown_identity() -> dict:
+    """Return an explicit abstention when no calibrated detector ran."""
+
+    return {"status": "unknown", "candidates": [], "evidence": []}

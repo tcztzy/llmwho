@@ -32,7 +32,7 @@ python3 -m unittest discover -s tests -v
 Tests must use local fake endpoints; paid or external model calls do not belong
 in the default suite. Changes to public behavior should update `SPEC.md`, the
 relevant language tests, and user documentation together. Python and Node
-events must remain compatible with `shared/observation-v1.schema.json`.
+events must remain compatible with `shared/observation-v2.schema.json`.
 
 Never persist credentials, query strings, headers, raw prompts, or raw
 responses. Telemetry code must remain fail-open and must preserve streaming and

@@ -20,16 +20,16 @@ export function anthropicRequestMetadata(payload, bytes) {
     operation: MESSAGES_OPERATION,
     input_bytes: Math.max(0, bytes),
   };
-  let claimedModel;
+  let requestedModel;
   if (payload && typeof payload === "object") {
     if (typeof payload.model === "string") {
-      claimedModel = payload.model;
-      metadata.claimed_model = claimedModel;
+      requestedModel = payload.model;
+      metadata.requested_model = requestedModel;
     }
     if (typeof payload.stream === "boolean") metadata.stream = payload.stream;
     if (Array.isArray(payload.messages)) metadata.role_count = payload.messages.length;
   }
-  return [metadata, claimedModel];
+  return [metadata, requestedModel];
 }
 
 export function anthropicResponseMetadata(payload, bytes, status) {
@@ -42,7 +42,6 @@ export function anthropicResponseMetadata(payload, bytes, status) {
 
   if (typeof payload.model === "string") {
     declaredModel = payload.model;
-    metadata.declared_model = declaredModel;
   }
   if (payload.usage && typeof payload.usage === "object") {
     const inputTokens = token(payload.usage.input_tokens);

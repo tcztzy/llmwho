@@ -69,7 +69,7 @@ class AnthropicAdapterTests(unittest.TestCase):
         self.assertTrue(is_messages_url(fixture["url"]))
         self.assertFalse(is_messages_url("https://api.example/v1/messages"))
 
-        request, claimed = request_metadata(
+        request, requested = request_metadata(
             fixture["request"], fixture["request_size"]
         )
         response, declared = response_metadata(
@@ -80,14 +80,14 @@ class AnthropicAdapterTests(unittest.TestCase):
 
         self.assertEqual(request, fixture["expected_request"])
         self.assertEqual(response, fixture["expected_response"])
-        self.assertEqual(claimed, fixture["request"]["model"])
+        self.assertEqual(requested, fixture["request"]["model"])
         self.assertEqual(declared, fixture["response"]["model"])
         serialized = json.dumps({"request": request, "response": response})
         self.assertNotIn("fixture user content", serialized)
         self.assertNotIn("fixture response content", serialized)
 
     def test_malformed_optional_metadata_is_omitted(self) -> None:
-        request, claimed = request_metadata(
+        request, requested = request_metadata(
             {"model": 7, "stream": "yes", "messages": {}}, -1
         )
         response, declared = response_metadata(
@@ -99,7 +99,7 @@ class AnthropicAdapterTests(unittest.TestCase):
             200,
         )
         self.assertEqual(request, {"operation": "messages", "input_bytes": 0})
-        self.assertIsNone(claimed)
+        self.assertIsNone(requested)
         self.assertEqual(response, {"status_code": 200, "output_bytes": 0})
         self.assertIsNone(declared)
 
@@ -126,6 +126,12 @@ class AnthropicAdapterTests(unittest.TestCase):
                     self.assertEqual(event["request"]["operation"], "messages")
                     self.assertEqual(event["request"]["role_count"], 2)
                     self.assertEqual(event["response"]["usage"]["total_tokens"], 20)
+                    self.assertEqual(
+                        event["model_declaration"]["status"],
+                        "matched",
+                    )
+                    self.assertEqual(event["identity"]["status"], "unknown")
+                    self.assertEqual(event["identity"]["candidates"], [])
                     self.assertEqual(
                         event["privacy"],
                         {"content_captured": False, "redactions": 2},
@@ -161,7 +167,7 @@ class AnthropicAdapterTests(unittest.TestCase):
                 for event in events:
                     self.assertTrue(event["request"]["stream"])
                     self.assertEqual(event["response"]["output_bytes"], 0)
-                    self.assertNotIn("declared_model", event["response"])
+                    self.assertNotIn("model_declaration", event)
                     self.assertEqual(event["transport"]["outcome"], "success")
             finally:
                 handle.shutdown()

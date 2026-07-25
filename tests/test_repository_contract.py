@@ -1,8 +1,7 @@
 import json
-from pathlib import Path
 import re
 import unittest
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -30,11 +29,40 @@ class RepositoryContractTests(unittest.TestCase):
             "docs/AGENT_HOOKS.md",
             "docs/OUTPUT_AFFINITY.md",
             "docs/SCIENCE_RUNTIME.md",
+            "docs/COLLECTOR.md",
             "examples/hooks/claude-code.settings.json",
             "examples/hooks/codex.hooks.json",
             "SECURITY.md",
+            "Dockerfile",
+            "compose.yaml",
+            "shared/observation-v2.schema.json",
+            "shared/fixtures/observation-v2.json",
         ):
             self.assertTrue((ROOT / relative).is_file(), relative)
+        self.assertFalse((ROOT / "shared/observation-v1.schema.json").exists())
+        self.assertFalse((ROOT / "shared/fixtures/observation-v1.json").exists())
+
+    def test_v44_provider_declaration_is_not_identity(self) -> None:
+        fixture = json.loads(
+            (ROOT / "shared/fixtures/observation-v2.json").read_text()
+        )
+        self.assertEqual(fixture["schema_version"], "2")
+        self.assertEqual(fixture["identity"]["status"], "unknown")
+        self.assertEqual(fixture["identity"]["candidates"], [])
+        self.assertEqual(fixture["identity"]["evidence"], [])
+        self.assertNotIn("confidence", fixture["identity"])
+        self.assertEqual(
+            fixture["model_declaration"]["evidence"][0]["kind"],
+            "provider_declaration",
+        )
+        for source in (
+            ROOT / "packages/python/src/llmwho/identity.py",
+            ROOT / "packages/node/src/identity.js",
+        ):
+            text = source.read_text()
+            self.assertNotIn("0.98", text)
+            self.assertNotIn("inferIdentity", text)
+            self.assertNotIn("infer_identity", text)
 
     def test_vision_locks_founder_expectations(self) -> None:
         vision = (ROOT / "docs/VISION.md").read_text(encoding="utf-8")
@@ -50,10 +78,12 @@ class RepositoryContractTests(unittest.TestCase):
         ):
             self.assertIn(phrase, vision)
 
-    def test_readme_states_probabilistic_and_passive_contract(self) -> None:
+    def test_readme_states_honest_identity_and_passive_contract(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("or send synthetic traffic", readme)
-        self.assertIn("probabilistic", readme)
+        self.assertIn(
+            "provider declaration, never as model identity or confidence", readme
+        )
         self.assertIn("does **not** include raw prompts", readme)
 
     def test_research_separates_evidence_status_and_product_claims(self) -> None:
@@ -74,10 +104,10 @@ class RepositoryContractTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         stability = (ROOT / "docs/STABILITY.md").read_text(encoding="utf-8")
         for phrase in (
-            "declared `model` field",
+            "provider declaration, never as model identity or confidence",
             "Undocumented model response headers are ignored",
             "Active probes cost requests and are never triggered by `init()`",
-            "Raw content capture is deliberately unavailable in 0.3",
+            "Raw content capture is deliberately unavailable in 0.4",
             "Capability similarity does not uniquely identify model weights",
         ):
             self.assertIn(phrase, readme)
@@ -175,6 +205,42 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertFalse((ROOT / "packages/node/src/output-affinity.js").exists())
         self.assertFalse((ROOT / "packages/python/src/llmwho/output_affinity.py").exists())
 
+    def test_v42_collector_is_deployable_authenticated_and_shared(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        guide = (ROOT / "docs/COLLECTOR.md").read_text(encoding="utf-8")
+        dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+        compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+        dashboard = (
+            ROOT / "packages/python/src/llmwho/dashboard.html"
+        ).read_text(encoding="utf-8")
+
+        for phrase in (
+            "llmwho collector",
+            "LLMWHO_COLLECTOR_URL",
+            "LLMWHO_COLLECTOR_TOKEN",
+            "Self-hosted Collector",
+        ):
+            self.assertIn(phrase, readme)
+        for phrase in (
+            "Collector is its owner",
+            "JSONL is interchange",
+            "OTLP/HTTP JSON",
+            "TLS reverse proxy",
+            "A batch containing",
+            "is rejected without persisting any member",
+        ):
+            self.assertIn(phrase, guide)
+        self.assertIn("USER 10001:10001", dockerfile)
+        self.assertIn('ENTRYPOINT ["llmwho"]', dockerfile)
+        self.assertIn('"collector", "--host", "0.0.0.0"', dockerfile)
+        self.assertIn("LLMWHO_COLLECTOR_TOKEN:?", compose)
+        self.assertIn('"127.0.0.1:7734:7734"', compose)
+        self.assertIn("read_only: true", compose)
+        self.assertIn("Collector bearer token", dashboard)
+        self.assertIn("setInterval(refresh,5000)", dashboard)
+        self.assertNotIn("localStorage", dashboard)
+        self.assertNotIn("sessionStorage", dashboard)
+
     def test_python_style_gate_bans_deferred_annotations(self) -> None:
         project = (ROOT / "packages/python/pyproject.toml").read_text(encoding="utf-8")
         pre_commit = (ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
@@ -232,7 +298,9 @@ class RepositoryContractTests(unittest.TestCase):
         release = (ROOT / ".github/workflows/release.yml").read_text(
             encoding="utf-8"
         )
-        guide = (ROOT / "docs/RELEASING.md").read_text(encoding="utf-8")
+        guide = " ".join(
+            (ROOT / "docs/RELEASING.md").read_text(encoding="utf-8").split()
+        )
 
         self.assertIn("branches: [main]", ci)
         self.assertNotIn("id-token: write", ci)
@@ -241,7 +309,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("name: pypi", release)
         self.assertIn("name: npm", release)
         self.assertIn(
-            "needs: [build-python, build-node, publish-pypi, publish-npm]",
+            "needs: [build-python, build-node, build-container, "
+            "publish-pypi, publish-npm]",
             release,
         )
         self.assertIn("needs: verify-registries", release)
@@ -257,6 +326,43 @@ class RepositoryContractTests(unittest.TestCase):
             "`pypi`",
             "`npm`",
             "rerun only the failed job",
+        ):
+            self.assertIn(phrase, guide)
+
+    def test_v46_container_ci_and_protected_main_release_gate(self) -> None:
+        ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        release = (ROOT / ".github/workflows/release.yml").read_text(
+            encoding="utf-8"
+        )
+        guide = " ".join(
+            (ROOT / "docs/RELEASING.md").read_text(encoding="utf-8").split()
+        )
+        smoke = ROOT / "scripts/smoke-container.sh"
+        smoke_text = smoke.read_text(encoding="utf-8")
+
+        self.assertIn("\n  container:\n", ci)
+        self.assertIn("scripts/smoke-container.sh llmwho:ci", ci)
+        self.assertIn("\n  build-container:\n", release)
+        self.assertIn("scripts/smoke-container.sh llmwho:release", release)
+        self.assertIn("needs: [build-python, build-container]", release)
+        self.assertIn("needs: [build-node, build-container]", release)
+        self.assertIn(
+            "git fetch --no-tags origin main:refs/remotes/origin/main", release
+        )
+        self.assertIn("git merge-base --is-ancestor HEAD origin/main", release)
+        self.assertNotEqual(smoke.stat().st_mode & 0o111, 0)
+        for phrase in (
+            "10001:10001",
+            "/api/health",
+            "error.code == 401",
+            "/api/summary",
+        ):
+            self.assertIn(phrase, smoke_text)
+        for phrase in (
+            "active repository ruleset",
+            "require these CI checks",
+            "`container`",
+            "rejects a tag whose commit is not in its history",
         ):
             self.assertIn(phrase, guide)
 

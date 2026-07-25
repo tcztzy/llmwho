@@ -91,18 +91,19 @@ def _request_redactions(url: str, api_key: str | None) -> int:
     return count
 
 
-def _identity_rollup(events: list[dict[str, Any]]) -> dict[str, Any]:
+def _declaration_rollup(events: list[dict[str, Any]]) -> dict[str, Any]:
     statuses: dict[str, int] = {}
-    candidates: dict[str, int] = {}
+    declared_models: dict[str, int] = {}
     for event in events:
-        identity = event["identity"]
-        statuses[identity["status"]] = statuses.get(identity["status"], 0) + 1
-        observed = identity.get("observed_model")
-        if observed:
-            candidates[observed] = candidates.get(observed, 0) + 1
+        declaration = event.get("model_declaration")
+        status = declaration["status"] if declaration else "missing"
+        statuses[status] = statuses.get(status, 0) + 1
+        if declaration:
+            declared = declaration["declared_model"]
+            declared_models[declared] = declared_models.get(declared, 0) + 1
     return {
         "statuses": dict(sorted(statuses.items())),
-        "observed_models": dict(sorted(candidates.items())),
+        "declared_models": dict(sorted(declared_models.items())),
     }
 
 
@@ -184,8 +185,6 @@ def probe(
         response_meta: dict[str, Any] = {"output_bytes": output_size}
         if status_code is not None:
             response_meta["status_code"] = status_code
-        if declared:
-            response_meta["declared_model"] = declared
         if response_payload and isinstance(response_payload.get("system_fingerprint"), str):
             response_meta["system_fingerprint"] = response_payload["system_fingerprint"]
         event = new_observation(
@@ -193,11 +192,11 @@ def probe(
             duration_ms=duration_ms,
             outcome=outcome,
             source="probe",
-            claimed_model=model,
+            requested_model=model,
             declared_model=declared,
             request={
                 "operation": "chat.completions",
-                "claimed_model": model,
+                "requested_model": model,
                 "stream": False,
                 "input_bytes": len(body),
                 "role_count": 2,
@@ -225,6 +224,7 @@ def probe(
                 "outcome": outcome,
                 "status_code": status_code,
                 "duration_ms": duration_ms,
+                "model_declaration": event.get("model_declaration"),
                 "identity": event["identity"],
             }
         )
@@ -233,7 +233,7 @@ def probe(
         url=url, duration_ms=0, outcome="network_error"
     )["endpoint"]
     return {
-        "schema_version": "1",
+        "schema_version": "2",
         "suite": "smoke",
         "model": model,
         "endpoint": endpoint,
@@ -245,6 +245,7 @@ def probe(
             "total": len(cases),
             "mean_score": score,
         },
-        "identity": _identity_rollup(events),
+        "declarations": _declaration_rollup(events),
+        "identity": {"status": "unknown", "candidates": [], "evidence": []},
         "cases": cases,
     }

@@ -14,6 +14,14 @@
 - uv-managed Python science runtime with versioned plugin discovery.
 - One authoritative output-affinity plugin shared by Python and Node.
 
+## v0.4 Collector
+
+- Shared SQLite WAL repository owned by one Collector process.
+- Native atomic batch ingestion and OTLP/HTTP JSON log ingestion.
+- Bounded, fail-open Python and Node remote sinks.
+- Authenticated non-loopback mode and live shared-data dashboard.
+- JSONL import/export and all-in-one container deployment.
+
 ## Next
 
 - Direct OpenAI, Google, and popular gateway adapters.
@@ -21,7 +29,7 @@
 - Reference-profile collection and signed community fingerprint bundles.
 - Adaptive probes selected by expected information gain.
 - Workload cohorting for passive behavioral drift.
-- Remote OpenTelemetry and self-hosted collector sinks.
+- Statistical drift alerts with sample size and effect evidence.
 
 ## Later
 

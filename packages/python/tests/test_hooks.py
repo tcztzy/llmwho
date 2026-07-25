@@ -91,7 +91,11 @@ class HookTests(unittest.TestCase):
             self.assertIs(async_response, FakeAsyncHttpxClient.response)
             events = store.read()
             self.assertEqual(len(events), 2)
-            self.assertEqual(events[0]["identity"]["status"], "mismatch")
+            self.assertEqual(events[0]["identity"]["status"], "unknown")
+            self.assertEqual(
+                events[0]["model_declaration"]["status"],
+                "mismatch",
+            )
             self.assertEqual(events[0]["request"]["role_count"], 1)
             self.assertNotIn("never-store", store.path.read_text())
             handle.shutdown()

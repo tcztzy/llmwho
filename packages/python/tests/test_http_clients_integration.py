@@ -56,6 +56,13 @@ class RealClientIntegrationTests(unittest.TestCase):
                 self.assertEqual(len(events), 2)
                 self.assertEqual(
                     [event["identity"]["status"] for event in events],
+                    ["unknown", "unknown"],
+                )
+                self.assertEqual(
+                    [
+                        event["model_declaration"]["status"]
+                        for event in events
+                    ],
                     ["mismatch", "mismatch"],
                 )
                 persisted = path.read_text(encoding="utf-8")
