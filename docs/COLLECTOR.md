@@ -96,10 +96,21 @@ when no Collector is configured.
 |---|---|---|
 | `GET` | `/` | dashboard shell; contains no observation data |
 | `GET` | `/api/health` | unauthenticated health and version |
-| `GET` | `/api/summary` | layered summary |
-| `GET` | `/api/events?limit=500` | validated observations |
+| `GET` | `/api/summary?since=&until=&…` | indexed layered summary; defaults to the last 24 hours |
+| `GET` | `/api/events?limit=500&cursor=&…` | newest-first validated observation page |
 | `POST` | `/api/v1/observations` | native `{ "observations": [...] }` batch |
 | `POST` | `/v1/logs` | OTLP/HTTP JSON logs |
+
+Both query endpoints accept `since`, `until`, `endpoint_host`,
+`endpoint_path`, `provider`, and `requested_model`. Times are timezone-qualified
+ISO 8601 values; `since` is inclusive and `until` is exclusive. When omitted,
+the summary window is the 24 hours ending when the request is handled. The
+events endpoint does not silently apply that time window: it returns at most
+`limit` rows (`1..2000`) and the envelope
+`{"events":[...],"next_cursor":"..."}`. Pass the opaque `next_cursor` back
+unchanged to continue; `null` means the page is final. Pages are ordered by
+timestamp and event ID, newest first, so successive cursors are deterministic
+and disjoint.
 
 When a token is configured, every data endpoint requires
 `Authorization: Bearer …`; only `/`, `/favicon.ico`, and `/api/health` remain
@@ -134,9 +145,10 @@ Collector creates SQLite in WAL mode with append-only tables for:
 
 Only observations have a public write endpoint in 0.4. Other tables reserve
 the common evidence contract for later workers; they do not imply unfinished
-detectors are active. Endpoint, model, transport, and timestamp columns are
-indexed for later cohort queries, while the full validated event remains the
-authoritative record.
+detectors are active. Endpoint, model, provider, transport, behavior, identity,
+and timestamp columns support indexed cohort summaries. Summary queries read
+those columns directly and do not deserialize the authoritative `event_json`.
+Only a requested, bounded event page loads full validated observations.
 
 Do not let dashboard, science, or exporter processes write the SQLite file
 directly. Collector is its owner. JSONL is interchange, archive, and local SDK

@@ -211,15 +211,35 @@ export class RemoteStore {
   }
 
   async read(limit) {
-    const suffix = limit === undefined ? "" : `?limit=${Math.max(0, Number(limit) || 0)}`;
-    const response = await this.fetchImpl(`${this.url}/api/events${suffix}`, {
-      headers: this.#headers(),
-    });
-    if (!response?.ok) throw new Error("Collector events request failed");
-    const events = await response.json();
-    if (!Array.isArray(events)) throw new Error("Collector events response must be an array");
-    events.forEach(validateObservation);
-    return events;
+    const requested = limit === undefined ? undefined : Math.max(0, Number(limit) || 0);
+    if (requested === 0) return [];
+    const events = [];
+    const seenCursors = new Set();
+    let cursor;
+    while (requested === undefined || events.length < requested) {
+      const pageLimit = requested === undefined
+        ? 2000
+        : Math.min(2000, requested - events.length);
+      const query = new URLSearchParams({ limit: String(pageLimit) });
+      if (cursor) query.set("cursor", cursor);
+      const response = await this.fetchImpl(`${this.url}/api/events?${query}`, {
+        headers: this.#headers(),
+      });
+      if (!response?.ok) throw new Error("Collector events request failed");
+      const page = await response.json();
+      if (!page || !Array.isArray(page.events)
+          || !(page.next_cursor === null || page.next_cursor === undefined
+            || typeof page.next_cursor === "string")) {
+        throw new Error("Collector events response must be a page");
+      }
+      page.events.forEach(validateObservation);
+      events.push(...page.events);
+      cursor = page.next_cursor ?? undefined;
+      if (!cursor) break;
+      if (seenCursors.has(cursor)) throw new Error("Collector repeated an event cursor");
+      seenCursors.add(cursor);
+    }
+    return events.reverse();
   }
 
   async close({ timeoutMs = 2000 } = {}) {

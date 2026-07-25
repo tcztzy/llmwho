@@ -5,7 +5,7 @@ from queue import Empty, Full, Queue
 from threading import Lock, Thread
 from time import monotonic
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 from .collector import OTLP_EVENT_ATTRIBUTE, OTLP_EVENT_TYPE
@@ -199,19 +199,46 @@ class RemoteStore:
                 self._queue.task_done()
 
     def read(self, limit: int | None = None) -> list[dict[str, Any]]:
-        suffix = "" if limit is None else f"?limit={max(0, int(limit))}"
-        request = Request(
-            f"{self.url}/api/events{suffix}",
-            headers=self._headers(),
-            method="GET",
-        )
-        with urlopen(request, timeout=self.request_timeout) as response:
-            value = json.load(response)
-        if not isinstance(value, list):
-            raise ValueError("Collector events response must be an array")
-        for event in value:
-            validate_observation(event)
-        return value
+        requested = None if limit is None else max(0, int(limit))
+        if requested == 0:
+            return []
+        events: list[dict[str, Any]] = []
+        cursor: str | None = None
+        seen_cursors: set[str] = set()
+        while requested is None or len(events) < requested:
+            page_limit = (
+                2000 if requested is None else min(2000, requested - len(events))
+            )
+            parameters: dict[str, object] = {"limit": page_limit}
+            if cursor is not None:
+                parameters["cursor"] = cursor
+            request = Request(
+                f"{self.url}/api/events?{urlencode(parameters)}",
+                headers=self._headers(),
+                method="GET",
+            )
+            with urlopen(request, timeout=self.request_timeout) as response:
+                value = json.load(response)
+            if (
+                not isinstance(value, dict)
+                or not isinstance(value.get("events"), list)
+                or (
+                    value.get("next_cursor") is not None
+                    and not isinstance(value.get("next_cursor"), str)
+                )
+            ):
+                raise ValueError("Collector events response must be a page")
+            page = value["events"]
+            for event in page:
+                validate_observation(event)
+            events.extend(page)
+            cursor = value.get("next_cursor")
+            if cursor is None:
+                break
+            if cursor in seen_cursors:
+                raise ValueError("Collector repeated an event cursor")
+            seen_cursors.add(cursor)
+        return list(reversed(events))
 
     def close(self, timeout: float = 2.0) -> bool:
         deadline = monotonic() + max(0, timeout)

@@ -197,6 +197,9 @@ value as a Bearer token. The dashboard asks for it in protected deployments and
 keeps it in page memory. Use TLS before sending that credential across a
 network. For Docker Compose, API details, OTLP mapping, JSONL import/export, and
 the data ownership model, see [Self-hosted Collector](docs/COLLECTOR.md).
+Collector summaries default to the most recent 24 hours and can be filtered by
+time, endpoint host/path, provider, and requested model. Event history uses
+bounded cursor pages, so the live dashboard never reloads the full database.
 
 ## Explicit active probe
 
@@ -254,6 +257,9 @@ The dashboard deliberately keeps five layers separate:
 4. capability—judge-free active-probe results;
 5. identity—independent detector candidates and unknown share; provider
    declaration agreement is displayed separately.
+
+The Collector-backed dashboard shows a rolling 24-hour window. Local JSONL
+summary commands still summarize the selected local file.
 
 See [Stability model](docs/STABILITY.md) for the adaptation of continuous
 benchmark systems such as AI Stupid Level, and [Research landscape](docs/RESEARCH.md)

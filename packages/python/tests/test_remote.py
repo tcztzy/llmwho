@@ -69,6 +69,10 @@ class RemoteStoreTests(unittest.TestCase):
                 self.assertEqual(
                     {value["event_id"] for value in rows}, {"native", "otlp"}
                 )
+                self.assertEqual(
+                    {value["event_id"] for value in native.read()},
+                    {"native", "otlp"},
+                )
                 self.assertNotIn("collector-token", json.dumps(rows))
             finally:
                 server.shutdown()

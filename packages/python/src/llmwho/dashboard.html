@@ -71,7 +71,7 @@
     </section>
     <section class="grid">
       <article class="panel">
-        <div class="panel-head"><h2>Transport latency</h2><span class="badge">last 200 observations</span></div>
+        <div class="panel-head"><h2>Transport latency</h2><span class="badge">last 24 hours</span></div>
         <div id="latency-chart" class="empty">Waiting for observations</div>
         <div class="metrics"><div class="metric"><span class="eyebrow">p50</span><strong id="p50">—</strong></div><div class="metric"><span class="eyebrow">p95</span><strong id="p95-detail">—</strong></div><div class="metric"><span class="eyebrow">p99</span><strong id="p99">—</strong></div></div>
       </article>
@@ -103,10 +103,11 @@
     }
     async function refresh() {
       try {
-        const [summaryResponse,eventResponse]=await Promise.all([api("/api/summary"),api("/api/events?limit=500")]);
+        const until=new Date(), since=new Date(until.getTime()-24*60*60*1000), scope=new URLSearchParams({since:since.toISOString(),until:until.toISOString()});
+        const [summaryResponse,eventResponse]=await Promise.all([api(`/api/summary?${scope}`),api(`/api/events?${scope}&limit=500`)]);
         if(summaryResponse.status===401||eventResponse.status===401) { requestToken(); return; }
         if(!summaryResponse.ok||!eventResponse.ok) throw new Error("API unavailable");
-        const summary=await summaryResponse.json(), events=await eventResponse.json(); const statuses=summary.identity.statuses||{}, declarations=summary.declarations||{}, declarationStatuses=declarations.statuses||{};
+        const summary=await summaryResponse.json(), page=await eventResponse.json(), events=[...(page.events||[])].reverse(); const statuses=summary.identity.statuses||{}, declarations=summary.declarations||{}, declarationStatuses=declarations.statuses||{};
         $("auth").hidden=true; $("freshness").previousElementSibling.style.background="var(--green)";
         $("availability").textContent=pct(summary.availability.success_rate); $("availability-note").textContent=`${summary.availability.outcomes.success||0} of ${summary.events} successful`;
         $("p95").textContent=ms(summary.transport.latency_ms.p95); $("p50").textContent=ms(summary.transport.latency_ms.p50); $("p95-detail").textContent=ms(summary.transport.latency_ms.p95); $("p99").textContent=ms(summary.transport.latency_ms.p99);
@@ -117,7 +118,7 @@
         bars("identity-bars",declarationStatuses,{matched:"var(--green)",unverified:"var(--muted)",missing:"var(--muted)",mismatch:"var(--red)"});
         const probeCases={}; events.filter(e=>e.probe).forEach(e=>{ const key=e.probe.case_id; probeCases[key]=(probeCases[key]||0)+Number(e.probe.passed); }); bars("capability-bars",probeCases);
         $("model-count").textContent=Object.keys(declarations.declared_models||{}).length; $("unknown-count").textContent=statuses.unknown||0; $("mismatch-count").textContent=declarationStatuses.mismatch||0; $("probe-count").textContent=summary.capability.probe_count; $("response-count").textContent=summary.behavior.observed_responses; $("stream-count").textContent=summary.behavior.stream_requests;
-        chart(events); $("event-count").textContent=`${summary.events} events`;
+        chart(events); $("event-count").textContent=`${summary.events} events · last 24h`;
         $("events").innerHTML=events.slice(-100).reverse().map(e=>`<tr><td>${safe(new Date(e.timestamp).toLocaleString())}</td><td>${safe(e.source)}</td><td title="${safe(e.endpoint.host+e.endpoint.path)}">${safe(e.endpoint.host+e.endpoint.path)}</td><td>${safe(e.request?.requested_model)}</td><td>${safe(e.model_declaration?.declared_model)}</td><td><span class="pill ${tone(e.transport.outcome)}">${safe(e.transport.outcome)}</span></td><td>${Math.round(e.transport.duration_ms)} ms</td><td><span class="pill ${tone(e.model_declaration?.status)}">${safe(e.model_declaration?.status)}</span></td></tr>`).join("")||'<tr><td colspan="8" style="text-align:center;color:var(--muted)">Call init(), then make an LLM request—or run an explicit probe.</td></tr>';
         $("freshness").textContent=`Live data · refreshed ${new Date().toLocaleTimeString()}`;
       } catch(error) { $("freshness").textContent="Dashboard API unavailable"; $("freshness").previousElementSibling.style.background="var(--red)"; }

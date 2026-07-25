@@ -6,6 +6,7 @@ from threading import Thread
 from unittest import mock
 import unittest
 from urllib.error import HTTPError
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 from llmwho.cli import main
@@ -145,10 +146,12 @@ class CollectorTests(unittest.TestCase):
                 with collector.request("/api/summary") as response:
                     self.assertEqual(json.load(response)["events"], 1)
                 with collector.request("/api/events?limit=10") as response:
+                    page = json.load(response)
                     self.assertEqual(
-                        [value["event_id"] for value in json.load(response)],
+                        [value["event_id"] for value in page["events"]],
                         ["event-1"],
                     )
+                    self.assertIsNone(page["next_cursor"])
             finally:
                 collector.close()
 
@@ -179,6 +182,64 @@ class CollectorTests(unittest.TestCase):
             finally:
                 collector.close()
 
+    def test_v45_default_window_cohorts_and_cursor_pages(self) -> None:
+        with TemporaryDirectory() as directory:
+            collector = RunningCollector(Path(directory) / "collector.sqlite3")
+            try:
+                current = [event(f"current-{index}") for index in range(3)]
+                current[2]["request"]["requested_model"] = "other"
+                historical = event("historical")
+                historical["timestamp"] = "2000-01-01T00:00:00Z"
+                with collector.request(
+                    "/api/v1/observations",
+                    method="POST",
+                    payload={"observations": [*current, historical]},
+                ):
+                    pass
+
+                with collector.request("/api/summary") as response:
+                    summary = json.load(response)
+                self.assertEqual(summary["events"], 3)
+                self.assertIsNotNone(summary["scope"]["since"])
+                self.assertIsNotNone(summary["scope"]["until"])
+
+                with collector.request(
+                    "/api/summary?requested_model=other"
+                ) as response:
+                    cohort = json.load(response)
+                self.assertEqual(cohort["events"], 1)
+                self.assertEqual(
+                    cohort["scope"]["cohort"],
+                    {"requested_model": "other"},
+                )
+
+                with collector.request("/api/events?limit=2") as response:
+                    first = json.load(response)
+                self.assertEqual(len(first["events"]), 2)
+                self.assertIsNotNone(first["next_cursor"])
+                with collector.request(
+                    f"/api/events?limit=2&cursor={quote(first['next_cursor'])}"
+                ) as response:
+                    second = json.load(response)
+                first_ids = {value["event_id"] for value in first["events"]}
+                second_ids = {value["event_id"] for value in second["events"]}
+                self.assertTrue(first_ids.isdisjoint(second_ids))
+                self.assertEqual(len(first_ids | second_ids), 4)
+                self.assertIsNone(second["next_cursor"])
+
+                for path in (
+                    "/api/events?limit=0",
+                    "/api/events?cursor=invalid",
+                    "/api/summary?since=not-a-time",
+                    "/api/summary?unknown=value",
+                ):
+                    with self.assertRaises(HTTPError) as invalid:
+                        collector.request(path)
+                    self.assertEqual(invalid.exception.code, 400)
+                    invalid.exception.close()
+            finally:
+                collector.close()
+
     def test_token_protects_data_apis_without_leaking_secret(self) -> None:
         token = "collector-secret-value"
         with TemporaryDirectory() as directory:
@@ -201,7 +262,10 @@ class CollectorTests(unittest.TestCase):
                 self.assertNotIn(token, unauthorized.exception.read().decode())
                 unauthorized.exception.close()
                 with collector.request("/api/events", token=token) as response:
-                    self.assertEqual(json.load(response), [])
+                    self.assertEqual(
+                        json.load(response),
+                        {"events": [], "next_cursor": None},
+                    )
             finally:
                 collector.close()
 

@@ -37,13 +37,19 @@ class DashboardTests(unittest.TestCase):
                 summary = json.loads(urlopen(f"{base}/api/summary").read())
                 self.assertEqual(summary["events"], 1)
                 self.assertEqual(summary["behavior"]["output_bytes_p50"], 12)
-                events = json.loads(urlopen(f"{base}/api/events?limit=1").read())
-                self.assertEqual(len(events), 1)
-                self.assertEqual(events[0]["identity"]["status"], "unknown")
+                self.assertIsNotNone(summary["scope"]["since"])
+                page = json.loads(urlopen(f"{base}/api/events?limit=1").read())
+                self.assertEqual(len(page["events"]), 1)
+                self.assertIsNone(page["next_cursor"])
+                self.assertEqual(page["events"][0]["identity"]["status"], "unknown")
                 self.assertEqual(
-                    events[0]["model_declaration"]["status"],
+                    page["events"][0]["model_declaration"]["status"],
                     "matched",
                 )
+                with self.assertRaises(HTTPError) as invalid:
+                    urlopen(f"{base}/api/events?limit=0")
+                self.assertEqual(invalid.exception.code, 400)
+                invalid.exception.close()
                 with self.assertRaises(HTTPError) as missing:
                     urlopen(f"{base}/missing")
                 self.assertEqual(missing.exception.code, 404)

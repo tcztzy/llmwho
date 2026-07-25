@@ -32,8 +32,22 @@ class SQLiteStoreTests(unittest.TestCase):
                 with sqlite3.connect(path) as connection:
                     journal_mode = connection.execute("PRAGMA journal_mode").fetchone()[0]
                     version = connection.execute("PRAGMA user_version").fetchone()[0]
+                    indexes = {
+                        row[1]
+                        for row in connection.execute(
+                            "PRAGMA index_list(observations)"
+                        ).fetchall()
+                    }
                 self.assertEqual(journal_mode, "wal")
                 self.assertEqual(version, 2)
+                self.assertTrue(
+                    {
+                        "observations_timestamp_idx",
+                        "observations_provider_idx",
+                        "observations_requested_model_idx",
+                        "observations_endpoint_idx",
+                    }.issubset(indexes)
+                )
 
     def test_v43_database_and_sidecars_ignore_permissive_umask(self) -> None:
         with TemporaryDirectory() as directory:
@@ -100,6 +114,95 @@ class SQLiteStoreTests(unittest.TestCase):
             rows = [json.loads(line) for line in exported.read_text().splitlines()]
             self.assertEqual([row["event_id"] for row in rows], ["one", "two"])
             self.assertEqual(exported.stat().st_mode & 0o777, 0o600)
+
+    def test_v45_summary_uses_indexed_columns_without_event_json(self) -> None:
+        with TemporaryDirectory() as directory, SQLiteStore(
+            Path(directory) / "collector.sqlite3"
+        ) as store:
+            events = [
+                observation("one", duration_ms=1),
+                observation("two", duration_ms=2),
+                observation("three", duration_ms=3),
+            ]
+            events[0]["response"] = {"status_code": 200, "output_bytes": 10}
+            events[0]["request"]["stream"] = True
+            events[1]["response"] = {"status_code": 200, "output_bytes": 20}
+            events[2]["endpoint"]["provider"] = "other"
+            for value in events:
+                store.append(value)
+            store._connection.execute(
+                "UPDATE observations SET event_json = 'not-json' "
+                "WHERE event_id = 'one'"
+            )
+            statements: list[str] = []
+            store._connection.set_trace_callback(statements.append)
+            summary = store.query_summary(
+                {
+                    "since": "2026-07-22T00:00:00.000000Z",
+                    "until": "2026-07-23T00:00:00.000000Z",
+                    "provider": "other",
+                }
+            )
+            store._connection.set_trace_callback(None)
+            self.assertEqual(summary["events"], 1)
+            self.assertEqual(summary["transport"]["latency_ms"]["p50"], 3)
+            self.assertEqual(summary["scope"]["cohort"], {"provider": "other"})
+            self.assertTrue(statements)
+            self.assertTrue(
+                all("event_json" not in statement.lower() for statement in statements)
+            )
+            plan = store._connection.execute(
+                "EXPLAIN QUERY PLAN SELECT COUNT(*) FROM observations "
+                "WHERE requested_model = ? AND timestamp >= ?",
+                ("one", "2026-07-22T00:00:00.000000Z"),
+            ).fetchall()
+            self.assertIn(
+                "observations_requested_model_idx",
+                " ".join(str(row) for row in plan),
+            )
+
+    def test_v45_cursor_pages_are_bounded_disjoint_and_filterable(self) -> None:
+        with TemporaryDirectory() as directory, SQLiteStore(
+            Path(directory) / "collector.sqlite3"
+        ) as store:
+            for index in range(1, 6):
+                value = observation(f"event-{index}", duration_ms=index)
+                if index == 5:
+                    value["request"]["requested_model"] = "other"
+                store.append(value)
+            selected = {
+                "since": "2026-07-22T00:00:00.000000Z",
+                "until": "2026-07-23T00:00:00.000000Z",
+                "requested_model": "event-1",
+            }
+            filtered = store.query_events(selected, limit=2)
+            self.assertEqual(
+                [value["event_id"] for value in filtered["events"]],
+                ["event-1"],
+            )
+            self.assertIsNone(filtered["next_cursor"])
+
+            first = store.query_events({}, limit=2)
+            second = store.query_events(
+                {},
+                limit=2,
+                cursor=first["next_cursor"],
+            )
+            third = store.query_events(
+                {},
+                limit=2,
+                cursor=second["next_cursor"],
+            )
+            identifiers = [
+                value["event_id"]
+                for page in (first, second, third)
+                for value in page["events"]
+            ]
+            self.assertEqual(len(identifiers), 5)
+            self.assertEqual(len(set(identifiers)), 5)
+            self.assertIsNone(third["next_cursor"])
+            with self.assertRaisesRegex(ValueError, "invalid event cursor"):
+                store.query_events({}, cursor="not-a-cursor")
 
 
 if __name__ == "__main__":

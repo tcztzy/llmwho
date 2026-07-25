@@ -149,3 +149,26 @@ test("RemoteStore rejects credentials embedded in Collector URL", () => {
     /without credentials/,
   );
 });
+
+test("RemoteStore follows Collector cursor pages and restores chronological order", async () => {
+  const newer = event("newer");
+  const older = event("older");
+  newer.timestamp = "2026-07-25T00:00:02.000Z";
+  older.timestamp = "2026-07-25T00:00:01.000Z";
+  const urls = [];
+  const store = new RemoteStore("https://collector.example", {
+    fetchImpl: async (url) => {
+      urls.push(String(url));
+      return urls.length === 1
+        ? new Response(JSON.stringify({ events: [newer], next_cursor: "next-page" }))
+        : new Response(JSON.stringify({ events: [older], next_cursor: null }));
+    },
+  });
+  assert.deepEqual(
+    (await store.read()).map((value) => value.event_id),
+    ["older", "newer"],
+  );
+  assert.equal(urls.length, 2);
+  assert.equal(new URL(urls[1]).searchParams.get("cursor"), "next-page");
+  assert.equal(await store.close(), true);
+});
