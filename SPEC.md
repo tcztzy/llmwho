@@ -155,3 +155,4 @@ B15|2026-07-25|provider-controlled `response.body.model` received arbitrary `0.9
 B16|2026-07-25|Collector dashboard poll read/deserialized/sorted full observation history every 5s|V45
 B17|2026-07-25|container deliverable had no CI runtime smoke and `main` accepted unguarded release commits|V46
 B18|2026-07-25|Node 18 CI test assumed response-clone delivery completed after one event-loop turn|wait on the observable Collector call with a bounded deadline; no new invariant
+B19|2026-07-25|Node artifact smoke unconditionally prefixed its original cwd to an already-absolute tarball path|resolve relative paths once, preserve absolute paths, and fail clearly when absent; no new invariant

@@ -2,13 +2,20 @@
 set -euo pipefail
 
 tarball=$1
+if [[ "$tarball" != /* ]]; then
+  tarball="$PWD/$tarball"
+fi
+if [[ ! -f "$tarball" ]]; then
+  echo "Node package tarball not found: $tarball" >&2
+  exit 1
+fi
 smoke_dir=$(mktemp -d)
 trap 'rm -rf "$smoke_dir"' EXIT
 
 (
   cd "$smoke_dir"
   npm init --yes >/dev/null
-  npm install --ignore-scripts "$OLDPWD/$tarball" >/dev/null
+  npm install --ignore-scripts "$tarball" >/dev/null
   node --input-type=module <<'NODE'
 const llmwho = await import("llmwho");
 if (typeof llmwho.JSONLStore !== "function"
